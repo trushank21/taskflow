@@ -1,0 +1,349 @@
+{% extends 'base.html' %}
+
+{% block title %}Project Overview | {{ project.title }}{% endblock %}
+{% block page_header %}Project Overview{% endblock %}
+
+{% block content %}
+<div class="animate__animated animate__fadeIn">
+
+    <div class="card-custom mb-4 border-start border-4 
+        {% if project.status == 'active' %}border-primary
+        {% elif project.status == 'on_hold' %}border-warning
+        {% elif project.status == 'inactive' %}border-danger
+        {% elif project.status == 'completed' %}border-success{% endif %} shadow-sm">
+        
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+            <div class="flex-grow-1">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb mb-2">
+                        <li class="breadcrumb-item"><a href="{% url 'projects:project_list' %}" class="text-decoration-none text-primary fw-medium">Projects</a></li>
+                        <li class="breadcrumb-item active">Project #{{ project.pk }}</li>
+                    </ol>
+                </nav>
+                <h2 class="fw-bold text-dark mb-0">
+                    {{ project.title }}
+                    {% if project.status == 'inactive' %}
+                        <i class="fas fa-lock text-danger ms-2" title="Environment Locked" data-bs-toggle="tooltip"></i>
+                    {% endif %}
+                </h2>
+                
+                <div class="mt-3" style="max-width: 450px;">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="text-muted small fw-bold text-uppercase letter-spacing-1">Overall Completion</span>
+                        <span class="fw-bold {% if project.status == 'inactive' %}text-danger{% else %}text-primary{% endif %} small">{{ project_progress }}%</span>
+                    </div>
+                    <div class="progress" style="height: 10px; border-radius: 10px; background-color: #e5e7eb;">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated 
+                            {% if project.status == 'active' %}bg-primary
+                            {% elif project.status == 'on_hold' %}bg-warning
+                            {% elif project.status == 'inactive' %}bg-danger
+                            {% elif project.status == 'completed' %}bg-success{% endif %}" 
+                             role="progressbar" style="width: {{ project_progress }}%"></div>
+                    </div>
+                </div>
+
+                <div class="mt-3">
+                    <span class="badge-pro 
+                        {% if project.status == 'active' %}bg-progress text-primary
+                        {% elif project.status == 'on_hold' %}bg-warning text-dark
+                        {% elif project.status == 'inactive' %}bg-danger text-white
+                        {% else %}bg-done text-success{% endif %}">
+                        <i class="fas {% if project.status == 'inactive' %}fa-lock{% else %}fa-signal{% endif %} me-1"></i> {{ project.get_status_display }}
+                    </span>
+                    <span class="text-muted small ms-2"><i class="far fa-calendar-alt me-1"></i> {{ project.start_date|date:"M d, Y" }} — {{ project.end_date|date:"M d, Y"|default:"TBD" }}</span>
+                </div>
+            </div>
+            
+            <div class="d-flex flex-column align-items-end gap-3">
+                <a href="{% url 'projects:project_list' %}" class="btn btn-light btn-sm fw-bold border text-muted shadow-sm"><i class="fas fa-arrow-left me-1 text-primary"></i> Back to ProjectList</a>
+                {% if request.user.profile.role in 'admin,manager' or project.team_lead == request.user %}
+                <div class="d-flex gap-2">
+                    {% if project.status != 'inactive' %}
+                    <a href="{% url 'projects:project_update' project.pk %}" class="btn btn-light btn-sm fw-bold border text-muted shadow-sm">
+                        <i class="fas fa-edit me-1 text-warning"></i> Edit
+                    </a>
+                    {% else %}
+                    <button class="btn btn-light btn-sm fw-bold border text-muted opacity-50" disabled>
+                        <i class="fas fa-lock me-1"></i> Locked
+                    </button>
+                    {% endif %}
+                    {% if request.user.profile.role in 'admin,manager' %}
+                    <a href="{% url 'projects:project_delete' project.pk %}" class="btn btn-outline-danger btn-sm fw-bold shadow-sm">
+                        <i class="fas fa-trash me-1"></i> Delete
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                <div class="avatar-group">
+                    {% for member in project.team_members.all|slice:":5" %}
+                        {% if member.username != 'admin' %}
+                            <img src="https://ui-avatars.com/api/?name={{ member.username }}&background=random&color=fff" 
+                                class="avatar-sm" 
+                                title="{{ member.username }}" 
+                                data-bs-toggle="tooltip">
+                        {% endif %}
+                    {% endfor %}
+                    {% if project.team_members.count > 5 %}
+                    <div class="avatar-sm-more">+{{ project.team_members.count|add:"-5" }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="card-custom text-center py-3 bg-white shadow-none border">
+                <h3 class="fw-bold text-primary mb-0">{{ task_counts.total }}</h3>
+                <p class="text-muted small text-uppercase fw-bold mb-0">Total Tasks</p>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card-custom text-center py-3 bg-white shadow-none border">
+                <h3 class="fw-bold text-warning mb-0">{{ task_counts.todo }}</h3>
+                <p class="text-muted small text-uppercase fw-bold mb-0">To Do</p>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card-custom text-center py-3 bg-white shadow-none border">
+                <h3 class="fw-bold text-info mb-0">{{ task_counts.in_progress }}</h3>
+                <p class="text-muted small text-uppercase fw-bold mb-0">Active</p>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card-custom text-center py-3 bg-white shadow-none border">
+                <h3 class="fw-bold text-success mb-0">{{ task_counts.completed }}</h3>
+                <p class="text-muted small text-uppercase fw-bold mb-0">Done</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card-custom mb-4 shadow-sm {% if project.status == 'inactive' %}bg-light opacity-75{% endif %}">
+                <h6 class="fw-bold text-uppercase small text-muted mb-3 border-bottom pb-2">Description</h6>
+                <div class="text-dark leading-relaxed">
+                    {{ project.description|linebreaks|default:"<p class='text-muted italic'>No description provided for this project.</p>" }}
+                </div>
+            </div>
+
+            <div class="card-custom p-0 overflow-hidden shadow-sm">
+                <div class="px-4 py-3 bg-light d-flex flex-wrap justify-content-between align-items-center border-bottom gap-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <h6 class="fw-bold mb-0">
+                            <i class="fas fa-tasks me-2 {% if project.status == 'inactive' %}text-danger{% else %}text-primary{% endif %}"></i>Tasks
+                        </h6>
+                        
+                        <ul class="nav nav-pills nav-pills-custom" id="taskTab" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active small py-1 px-3 fw-bold" id="my-tasks-tab" data-bs-toggle="pill" data-bs-target="#my-tasks" type="button">My Tasks ({{ my_tasks.count }})</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link small py-1 px-3 fw-bold" id="all-tasks-tab" data-bs-toggle="pill" data-bs-target="#all-tasks" type="button">All Tasks</button>
+                            </li>
+                        </ul>
+                    </div>
+
+                    {% if request.user.profile.role in 'admin,manager' or project.team_lead == request.user %}
+                        {# User HAS permission to manage, now check if the project is open #}
+                        {% if project.status != 'inactive' %}
+                            <a href="{% url 'tasks:task_create' %}?project={{ project.id }}" class="btn btn-primary-custom btn-sm py-1 fw-bold shadow-sm">
+                                <i class="fas fa-plus me-1"></i> Add Task
+                            </a>
+                        {% else %}
+                            {# Manager/Lead sees this when they are blocked by the 'Inactive' status #}
+                            <span class="badge bg-danger bg-opacity-10 text-danger fw-bold small">
+                                <i class="fas fa-lock me-1"></i> Project Locked
+                            </span>
+                        {% endif %}
+
+                    {% elif request.user.profile.role == 'observer' or project.status == 'inactive' %}
+                        {# Regular members or observers see this #}
+                        <span class="badge bg-secondary bg-opacity-10 text-secondary fw-bold small">
+                            <i class="fas fa-eye me-1"></i> Read-Only View
+                        </span>
+                    {% endif %}
+                    
+                </div>
+
+                <div class="tab-content" id="taskTabContent">
+                    <div class="tab-pane fade show active" id="my-tasks" role="tabpanel">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th class="ps-4 small text-muted text-uppercase border-0">Title</th>
+                                        <th class="small text-muted text-uppercase border-0">Status</th>
+                                        <th class="small text-muted text-uppercase border-0">Progress</th>
+                                        <th class="pe-4 small text-muted text-uppercase border-0 text-end">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for task in my_tasks %}
+                                    <tr class="{% if task.status == 'blocked' %}bg-danger bg-opacity-10{% endif %}">
+                                        <td class="ps-4">
+                                            <a href="{% url 'tasks:task_detail' task.pk %}" class="fw-bold text-dark text-decoration-none small d-block">
+                                                {{ task.title }}
+                                                {% if task.status == 'blocked' %}<i class="fas fa-ban text-danger ms-1" style="font-size: 10px;"></i>{% endif %}
+                                            </a>
+                                            <span class="badge-pro {% if task.priority == 'urgent' or task.priority == 'high' %}bg-high{% else %}bg-progress{% endif %}" style="font-size: 10px; padding: 1px 5px;">{{ task.get_priority_display }}</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge-pro 
+                                                {% if task.status == 'todo' %}bg-todo
+                                                {% elif task.status == 'in_progress' %}bg-progress
+                                                {% elif task.status == 'blocked' %}bg-danger text-white
+                                                {% else %}bg-done{% endif %} small">
+                                                {{ task.get_status_display }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <div class="progress" style="height: 6px; width: 60px;">
+                                                    <div class="progress-bar {% if task.status == 'blocked' %}bg-danger{% else %}bg-primary{% endif %}" role="progressbar" style="width: {{ task.progress }}%"></div>
+                                                </div>
+                                                <span class="small text-muted" style="font-size: 10px;">{{ task.progress }}%</span>
+                                            </div>
+                                        </td>
+                                        <td class="pe-4 text-end">
+                                            <a href="{% url 'tasks:task_detail' task.pk %}" class="btn btn-light btn-sm rounded-pill py-0 px-2 border"><i class="fas fa-arrow-right text-muted" style="font-size: 10px;"></i></a>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr><td colspan="4" class="text-center py-5 text-muted small">No tasks assigned to you.</td></tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade" id="all-tasks" role="tabpanel">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th class="ps-4 small text-muted text-uppercase border-0">Title</th>
+                                        <th class="small text-muted text-uppercase border-0">Assignee</th>
+                                        <th class="small text-muted text-uppercase border-0">Status</th>
+                                        <th class="pe-4 small text-muted text-uppercase border-0 text-end">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for task in all_tasks %}
+                                    <tr class="{% if task.status == 'blocked' %}bg-danger bg-opacity-10{% endif %}">
+                                        <td class="ps-4">
+                                            <a href="{% url 'tasks:task_detail' task.pk %}" class="fw-bold text-dark text-decoration-none small d-block">{{ task.title }}</a>
+                                            <span class="badge-pro {% if task.priority == 'high' %}bg-high{% else %}bg-progress{% endif %}" style="font-size: 10px; padding: 1px 5px;">{{ task.get_priority_display }}</span>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <img src="https://ui-avatars.com/api/?name={{ task.assigned_to.username }}&background=6366f1&color=fff" class="rounded-circle me-2" width="22" height="22">
+                                                <span class="small text-muted">{{ task.assigned_to.username|default:"Unassigned" }}</span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="badge-pro 
+                                                {% if task.status == 'todo' %}bg-todo
+                                                {% elif task.status == 'in_progress' %}bg-progress
+                                                {% elif task.status == 'blocked' %}bg-danger text-white
+                                                {% else %}bg-done{% endif %} small">
+                                                {{ task.get_status_display }}
+                                            </span>
+                                        </td>
+                                        <td class="pe-4 text-end">
+                                            <a href="{% url 'tasks:task_detail' task.pk %}" class="btn btn-light btn-sm rounded-pill py-0 px-2 border"><i class="fas fa-arrow-right text-muted" style="font-size: 10px;"></i></a>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr><td colspan="4" class="text-center py-5 text-muted small">No tasks found.</td></tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card-custom mb-4 shadow-sm">
+                <h6 class="fw-bold mb-3 border-bottom pb-2"><i class="fas fa-user-shield me-2 text-primary"></i>Project Lead</h6>
+                <div class="d-flex align-items-center p-2 bg-light rounded-3 border">
+                    <img src="https://ui-avatars.com/api/?name={{ project.team_lead.username }}&background=6366f1&color=fff" class="rounded-circle me-3 shadow-sm" width="40">
+                    <div>
+                        <span class="fw-bold text-dark d-block small">{{ project.team_lead.get_full_name|default:project.team_lead.username }}</span>
+                        <span class="text-muted" style="font-size: 11px;">Lead Manager</span>
+                    </div>
+                </div>
+            </div>
+
+            {% if project.status == 'on_hold' %}
+            <div class="alert alert-warning border-0 shadow-sm d-flex align-items-start gap-3 mb-4">
+               <i class="fas fa-info-circle fs-4"></i>
+               <div class="small">
+                   <strong>Rule B Notice:</strong> This project is currently <strong>On Hold</strong>. Existing data is preserved, but active development is paused.
+               </div>
+            </div>
+            {% endif %}
+
+            <div class="card-custom bg-dark text-white border-0 shadow-lg">
+                <h6 class="fw-bold mb-3 text-white-50 small text-uppercase letter-spacing-1">Activity Log</h6>
+                <div class="d-flex gap-3 mb-3">
+                    <div class="bg-white bg-opacity-10 p-2 rounded"><i class="fas fa-user-plus text-success"></i></div>
+                    <div>
+                        <small class="d-block text-white-50">Initiated By</small>
+                        <small class="fw-medium">{{ project.created_by.username }}</small>
+                    </div>
+                </div>
+                <div class="d-flex gap-3 mb-3">
+                    <div class="bg-white bg-opacity-10 p-2 rounded"><i class="fas fa-calendar-check text-info"></i></div>
+                    <div>
+                        <small class="d-block text-white-50">Created on</small>
+                        <small class="fw-medium">{{ project.created_at|date:"M d, Y" }}</small>
+                    </div>
+                </div>
+                <div class="d-flex gap-3">
+                    <div class="bg-white bg-opacity-10 p-2 rounded"><i class="fas fa-history text-warning"></i></div>
+                    <div>
+                        <small class="d-block text-white-50">Last Update</small>
+                        <small class="fw-medium">{{ project.updated_at|timesince }} ago</small>
+                    </div>
+                </div>
+            </div>
+            
+            <a href="{% url 'projects:project_list' %}" class="btn btn-light w-100 mt-4 border text-muted fw-bold btn-sm shadow-sm">
+                <i class="fas fa-chevron-left me-1"></i> Project Inventory
+            </a>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Professional status colors as per Diagram Rules */
+    .bg-todo { background-color: #f3f4f6; color: #4b5563; }
+    .bg-progress { background-color: #e0e7ff; color: #4338ca; }
+    .bg-done { background-color: #dcfce7; color: #15803d; }
+    .bg-high { background-color: #fee2e2; color: #b91c1c; }
+    
+    .cursor-not-allowed { cursor: not-allowed; }
+    .letter-spacing-1 { letter-spacing: 1px; }
+
+    /* Custom Styling from previous turn */
+    .nav-pills-custom .nav-link { 
+        color: #6b7280; background: #f3f4f6; border-radius: 20px; 
+        margin-right: 5px; border: 1px solid transparent; 
+    }
+    .nav-pills-custom .nav-link.active { 
+        background-color: var(--primary) !important; color: white !important; 
+    }
+
+    .avatar-group { display: flex; align-items: center; }
+    .avatar-sm { 
+        width: 32px; height: 32px; border-radius: 50%; 
+        border: 2px solid white; margin-left: -12px; 
+        transition: transform 0.2s ease; object-fit: cover; 
+    }
+    .avatar-sm:first-child { margin-left: 0; }
+</style>
+{% endblock %}

@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+
+{% block title %}Project Workspace | TaskFlow{% endblock %}
+{% block page_header %}Project Workspace{% endblock %}
+
+{% block content %}
+<div class="animate__animated animate__fadeIn">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold mb-0">Project Workspace</h4>
+            <p class="text-muted small mb-0">Manage project lifecycles and environment health.</p>
+        </div>
+        {% if request.user.profile.role != 'developer' and request.user.profile.role != 'observer' %}
+        <a href="{% url 'projects:project_create' %}" class="btn btn-primary-custom btn-sm fw-bold shadow-sm">
+            <i class="fas fa-plus me-1"></i> New Project
+        </a>
+        {% endif %}
+    </div>
+
+    <div class="card-custom mb-4 p-3 bg-white shadow-sm border-0">
+        <div class="row g-3">
+            <div class="col-md-8 position-relative">
+                <input type="text" id="project-search" class="form-control ps-5 border-light-subtle" placeholder="Search by project name or description...">
+                <i class="fas fa-search position-absolute top-50 translate-middle-y ms-3 text-muted"></i>
+            </div>
+            <div class="col-md-4">
+                <select id="status-filter" class="form-select border-light-subtle fw-medium">
+                    <option value="">All Lifecycle States</option>
+                    <option value="active" class="text-primary fw-bold">● Active Work</option>
+                    <option value="on_hold" class="text-warning fw-bold">● On Hold</option>
+                    <option value="inactive" class="text-danger fw-bold">● Inactive (Locked)</option>
+                    <option value="completed" class="text-success fw-bold">● Completed (History)</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4" id="project-container">
+        {% include 'projects/includes/project_cards.html' %}
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script>
+$(document).ready(function() {
+    let searchTimer;
+
+    function fetchProjects() {
+        const query = $('#project-search').val();
+        const status = $('#status-filter').val();
+        const $container = $('#project-container');
+
+        $container.css('opacity', '0.5');
+
+        $.ajax({
+            url: "{% url 'projects:project_list' %}",
+            data: { 'q': query, 'status': status },
+            headers: {'X-Requested-With': 'XMLHttpRequest'},
+            success: function(data) {
+                $container.html(data.html).css('opacity', '1');
+                // Re-initialize tooltips if you use them
+                $('[data-bs-toggle="tooltip"]').tooltip();
+            }
+        });
+    }
+
+    $('#project-search').on('keyup', function() {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(fetchProjects, 300);
+    });
+
+    $('#status-filter').on('change', fetchProjects);
+
+    // AJAX Delete logic with Lifecycle awareness
+    $(document).on('click', '.ajax-delete-project', function(e) {
+        e.preventDefault();
+        const url = $(this).attr('href');
+        const $card = $(this).closest('.project-item');
+
+        if (confirm("Warning: Deleting this project removes all associated tasks permanently. Continue?")) {
+            $.ajax({
+                type: 'POST',
+                url: url,
+                data: { 'csrfmiddlewaretoken': '{{ csrf_token }}' },
+                headers: {'X-Requested-With': 'XMLHttpRequest'},
+                success: function(response) {
+                    $card.animate({ opacity: 0, scale: "0.9" }, 300, function() {
+                        $(this).remove();
+                    });
+                },
+                error: function(xhr) {
+                    alert(xhr.responseJSON.message || "Deletion failed.");
+                }
+            });
+        }
+    });
+});
+</script>
+{% endblock %}

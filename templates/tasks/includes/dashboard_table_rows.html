@@ -1,0 +1,171 @@
+{% for task in recent_tasks %}
+<tr class="animate__animated animate__fadeIn {% if task.project.status == 'inactive' %}opacity-75 bg-light{% endif %}">
+    <td class="ps-4"><span class="small text-muted">{{ forloop.counter }}</span></td>
+
+
+    <td class="px-3">
+        <div class="d-flex align-items-center">
+            <div class="form-check me-2">
+
+                <!-- <input type="checkbox" class="form-check-input task-quick-toggle shadow-none" 
+                       data-id="{{ task.pk }}" {% if task.status == 'completed' %}checked{% endif %}
+                       
+                       {% if task.project.status == 'inactive' or request.user.profile.role == 'observer' or request.user.profile.role == 'developer' and task.assigned_to != request.user and task.project.team_lead != request.user %}
+                            disabled title="Access Restricted"
+                       {% endif %}> -->
+
+                <input type="checkbox" 
+                    class="form-check-input task-quick-toggle shadow-none {% if task.project.status == 'inactive' or request.user.profile.role == 'observer' %}greyed-out{% endif %}" 
+                    data-id="{{ task.pk }}" 
+                    {% if task.status == 'completed' %}checked{% endif %}
+                    
+                    {% if task.project.status == 'inactive' or request.user.profile.role not in 'admin,manager' and task.project.team_lead != request.user and task.assigned_to != request.user %}
+                        disabled 
+                        style="cursor: not-allowed; opacity: 0.5; filter: grayscale(100%);"
+                        title="Only Admins, Team Leads, or Assignees can edit this task."
+                    {% endif %}>
+                                
+            </div>
+            <div class="task-icon me-2 bg-light rounded-circle d-flex align-items-center justify-content-center" style="width: 30px; height: 30px;">
+                {% if task.project.status == 'inactive' or request.user.profile.role == 'observer' or request.user.profile.role == 'developer' and task.assigned_to != request.user and task.project.team_lead != request.user %}
+                    <i class="fas fa-lock text-danger" style="font-size: 10px;"></i>
+                {% else %}
+                    <i class="fas fa-file-alt text-muted small" style="font-size: 10px;"></i>
+                {% endif %}
+            </div>
+            <a href="{% url 'tasks:task_detail' task.pk %}" class="fw-semibold text-dark text-decoration-none {% if task.status == 'completed' %}text-decoration-line-through text-muted{% endif %}">
+                {{ task.title }}
+            </a>
+        </div>
+    </td>
+
+    <td>
+        <div class="d-flex align-items-center">
+            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 24px; height: 24px; font-size: 10px;">
+                {{ task.project.team_lead.username |slice:":1"|upper }}
+            </div>
+            <span class="small fw-medium">{{ task.project.team_lead }}</span>
+        </div>
+    </td>
+    
+<td>
+    <div class="d-flex flex-column">
+        <span class="small fw-bold text-dark">
+            {{ task.updated_at|timesince }} ago
+        </span>
+        <span class="extra-small text-muted">
+            {{ task.updated_at|date:"M d, h:i A" }}
+        </span>
+    </div>
+</td>
+
+    <td>
+        {% if task.due_date %}
+            <span class="badge rounded-pill px-2 py-1 fw-bold" 
+                  style="font-size: 10px; 
+                  {% if task.due_date < today and task.status != 'completed' %}background: #fee2e2; color: #b91c1c;
+                  {% elif task.due_date == today %}background: #fef3c7; color: #92400e;
+                  {% else %}background: #d1fae5; color: #15803d;{% endif %}">
+                {{ task.due_date|date:"M d" }}
+            </span>
+        {% else %}
+            <span class="text-muted small">No due date</span>
+        {% endif %}
+    </td>
+    
+    <td>
+        <span class="badge rounded-pill px-2 py-1 fw-bold" 
+              style="font-size: 10px; 
+              {% if task.project.status == 'active' %}background: #e0e7ff; color: #4338ca;
+              {% elif task.project.status == 'on_hold' %}background: #fef3c7; color: #92400e;
+              {% elif task.project.status == 'inactive' %}background: #fee2e2; color: #b91c1c;
+              {% else %}background: #dcfce7; color: #15803d;{% endif %}">
+            {% if task.project.status == 'inactive' %}<i class="fas fa-lock me-1"></i>{% endif %}
+            {{ task.project.title|truncatechars:18 }}
+            
+        </span>
+    </td>
+
+
+
+    <td>
+        <div class="d-flex align-items-center">
+            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 24px; height: 24px; font-size: 10px;">
+                {{ task.assigned_to.username|slice:":1"|upper }}
+            </div>
+            <span class="small fw-medium">{{ task.assigned_to.username }}</span>
+        </div>
+    </td>
+    
+    <td>
+        <span class="badge-pro 
+            {% if task.status == 'completed' %}bg-done
+            {% elif task.status == 'blocked' %}bg-danger text-white
+            {% elif task.status == 'todo' %}bg-todo
+            {% else %}bg-progress{% endif %}" style="font-size: 10px;">
+            {{ task.get_status_display }}
+        </span>
+    </td>
+
+    <td>
+    <div class="progress" style="height: 10px; width: 100px; background-color: #e9ecef;">
+        <div class="progress-bar bg-primary" 
+             role="progressbar" 
+             style="width: {{ task.project.overall_progress|default:0 }}%; transition: width 0.5s ease;" 
+             aria-valuenow="{{ task.project.overall_progress|default:0 }}" 
+             aria-valuemin="0" 
+             aria-valuemax="100">
+        </div>
+    </div>
+    <small class="text-muted d-block mt-1" style="font-size: 9px; font-weight: bold;">
+        {{ task.project.overall_progress|default:0 }}% Project Done
+    </small>
+</td>
+
+    <td class="text-end px-3">
+        <div class="d-flex justify-content-end gap-2">
+            <a href="{% url 'tasks:task_detail' task.pk %}" class="btn btn-light btn-sm rounded-pill shadow-sm border">
+                <i class="fas fa-chevron-right text-muted" style="font-size: 10px;"></i>
+            </a>
+            {% if task.project.status == 'inactive' or request.user.profile.role == 'observer' or request.user.profile.role == 'developer' and task.assigned_to != request.user and task.project.team_lead != request.user %}
+                 <span class="btn btn-light btn-sm rounded-pill border opacity-50" style="cursor: not-allowed;">
+                    <i class="fas fa-lock text-muted" style="font-size: 10px;"></i>
+                 </span>
+            {% endif %}
+        </div>
+    </td>
+</tr>
+{% empty %}
+<tr>
+    <td colspan="5" class="text-center text-muted py-5">
+        <i class="fas fa-search fs-1 d-block mb-3 opacity-25"></i>
+        No activity found in this workspace.
+    </td>
+</tr>
+{% endfor %}
+
+
+<style>
+    .grayscale-filter { 
+    filter: grayscale(100%); 
+    pointer-events: none; /* This prevents clicking links in the row if you want full lock */
+}
+.grayscale-filter a {
+    pointer-events: auto; /* Allows clicking the detail link even if row is gray */
+}
+
+/* This targets disabled checkboxes specifically */
+input.task-quick-toggle:disabled {
+    background-color: #e9ecef !important; /* Light grey background */
+    border-color: #dee2e6 !important;
+    opacity: 0.6;
+    cursor: not-allowed;
+    filter: saturate(0); /* Removes any color pops */
+}
+
+/* Optional: Add a helper class if you want to grey out the parent container too */
+.task-row-disabled {
+    color: #6c757d;
+    background-color: #f8f9fa;
+}
+</style>

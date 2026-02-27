@@ -1,0 +1,281 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard | TaskFlow{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 animate__animated animate__fadeIn">
+    <div>
+        <h4 class="fw-bold text-dark mb-0" id="view-title">
+            {% if view_mode == 'team' %}Team Workspace{% else %}Personal Workspace{% endif %}
+        </h4>
+        <p class="text-muted small mb-0">Live project activity and task tracking.</p>
+    </div>
+
+    <div class="btn-group bg-white p-1 rounded-3 shadow-sm border" style="height: 40px;">
+        <button data-view="personal" class="btn-view-toggle btn btn-sm d-flex align-items-center px-4 fw-bold {% if view_mode != 'team' %}btn-primary shadow-sm{% else %}btn-light text-muted border-0{% endif %}" style="font-size: 12px;">
+            <i class="fas fa-user me-2"></i> Personal
+        </button>
+        <button data-view="team" class="btn-view-toggle btn btn-sm d-flex align-items-center px-4 fw-bold {% if view_mode == 'team' %}btn-primary shadow-sm{% else %}btn-light text-muted border-0{% endif %}" style="font-size: 12px;">
+            <i class="fas fa-users me-2"></i> Team
+        </button>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-12 col-md-4 col-xl">
+        <div class="card-custom h-100 border-start border-4 shadow-sm" style="border-color: #6366f1 !important;">
+            <p class="text-muted small text-uppercase fw-bold mb-1">Active Tasks</p>
+            <div class="d-flex align-items-baseline gap-2">
+                <h2 class="fw-bold mb-0 count-active" style="color: #6366f1;">{{ total_active }}</h2>
+                <span class="text-muted extra-small">in <span class="count-active-proj">{{ active_projects_count }}</span> projects</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-12 col-md-4 col-xl">
+        <div class="card-custom h-100 border-start border-4 shadow-sm" style="border-color: #10b981 !important;">
+            <p class="text-muted small text-uppercase fw-bold mb-1">Completed</p>
+            <h2 class="fw-bold mb-0 count-completed text-success">{{ completed_tasks }}</h2>
+        </div>
+    </div>
+
+    <div class="col-12 col-md-4 col-xl">
+        <div class="card-custom h-100 border-start border-4 shadow-sm" style="border-color: #f59e0b !important;">
+            <p class="text-muted small text-uppercase fw-bold mb-1">On Hold</p>
+            <div class="d-flex align-items-baseline gap-2">
+                <h2 class="fw-bold mb-0 count-on-hold" style="color: #f59e0b;">{{ on_hold_count }}</h2>
+                <span class="text-muted extra-small">in <span class="count-on-hold-proj">{{ on_hold_projects_count }}</span> projects</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-md-6 col-xl">
+        <div class="card-custom h-100 border-start border-4 shadow-sm" style="border-color: #ef4444 !important;">
+            <p class="text-muted small text-uppercase fw-bold mb-1 text-danger"><i class="fas fa-lock me-1"></i> Inactive</p>
+            <div class="d-flex align-items-baseline gap-2">
+                <h2 class="fw-bold mb-0 count-inactive text-danger">{{ inactive_count }}</h2>
+                <span class="text-muted extra-small">in <span class="count-inactive-proj">{{ inactive_projects_count }}</span> projects</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-12 col-md-6 col-xl">
+        <div class="card-custom h-100 border-start border-4 shadow-sm" style="border-color: #ef4444 !important;">
+            <p class="text-muted small text-uppercase fw-bold mb-1 text-danger"><i class="fas fa-lock me-1"></i> Blocked</p>
+            <div class="d-flex align-items-baseline gap-2">
+                <h2 class="fw-bold mb-0 count-inactive text-danger">{{ blocked_tasks_count }} </h2>
+                <span class="text-muted extra-small">in <span class="count-inactive-proj">{{ projects_with_blocked_tasks }}</span> projects</span>
+            </div>
+        </div>
+    </div>
+
+    
+
+    <div class="col-12 col-md-6 col-xl">
+        <div class="card-custom h-100 bg-primary text-white border-0 shadow-sm">
+            <p class="small text-uppercase fw-bold mb-1 opacity-75">Efficiency</p>
+            <h2 class="fw-bold mb-0"><span id="efficiency-val">{{ efficiency }}</span>%</h2>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <h5 class="card-title">Overall Project Completion</h5>
+        <div class="progress" style="height: 25px;">
+            <div id="overall-progress-bar" class="progress-bar bg-primary" 
+                 role="progressbar" 
+                 style="width: {{ overall_completion }}%;" 
+                 aria-valuenow="{{ overall_completion }}" 
+                 aria-valuemin="0" 
+                 aria-valuemax="100">
+                {{ overall_completion }}%
+            </div>
+        </div>
+        <small class="text-muted">Average progress across all tasks</small>
+    </div>
+</div>
+
+
+<div class="card-custom border-0 shadow-sm">
+    <div class="d-flex align-items-center mb-4 gap-3">
+        <h5 class="fw-bold mb-0 text-nowrap">Recent Activity</h5>
+        <div class="position-relative" style="width: 350px;">
+            <i class="fas fa-search position-absolute top-50 translate-middle-y ms-3 text-muted"></i>
+            <input type="text" id="dashboard-search" class="form-control ps-5 pe-5 rounded-pill border-light bg-light shadow-none" placeholder="Search tasks or projects...">
+            <button id="clear-search" class="btn btn-link position-absolute top-50 end-0 translate-middle-y me-2 text-muted p-0 d-none" style="text-decoration: none;">
+                <i class="fas fa-times-circle"></i>
+            </button>
+        </div>
+        <div class="me-auto"></div>
+        <div>
+            <a href="{% url 'tasks:task_list' %}" class="btn btn-primary-custom btn-sm fw-bold shadow-sm px-3 text-nowrap">
+                View All Tasks <i class="fas fa-arrow-right ms-1" style="font-size: 10px;"></i>
+            </a>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="bg-light">
+                <tr>
+                    <th class="border-0 px-3 text-muted small text-uppercase">No.</th>
+                    <th class="border-0 px-3 text-muted small text-uppercase">Task</th>
+                    <th class="border-0 px-3 text-muted small text-uppercase">Team Leader</th>
+                    <th class="border-0 text-muted small text-uppercase">Time Since</th>
+                    <th class="border-0 text-muted small text-uppercase">Due Date</th>
+                    <th class="border-0 text-muted small text-uppercase">Project</th>
+                    <th class="border-0 text-muted small text-uppercase">Assignee</th>
+                    <th class="border-0 text-muted small text-uppercase">Status</th>
+                    <th class="border-0 text-muted small text-uppercase">Progress</th>
+                    <th class="border-0 text-muted small text-uppercase text-end">Action</th>
+                </tr>
+            </thead>
+            <tbody id="task-table-body">
+                {% include 'tasks/includes/dashboard_table_rows.html' %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<style>
+    .extra-small { font-size: 10px; }
+    /* Logic to ensure 5 cards fit well on large screens */
+    @media (min-width: 1200px) {
+        .col-xl { flex: 1 0 0%; }
+    }
+</style>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script>
+$(document).ready(function() {
+    let searchTimer;
+
+    function refreshDashboard(params = {}) {
+        const activeView = $('.btn-view-toggle.btn-primary').data('view');
+        const query = $('#dashboard-search').val();
+        
+        if (query.length > 0) {
+            $('#clear-search').removeClass('d-none');
+        } else {
+            $('#clear-search').addClass('d-none');
+        }
+
+        const requestData = {
+            'view': activeView,
+            'q': query,
+            ...params
+        };
+
+        $('#task-table-body').css('opacity', '0.5');
+
+        $.ajax({
+            url: window.location.pathname,
+            data: requestData,
+            headers: {'X-Requested-With': 'XMLHttpRequest'},
+            success: function(response) {
+                // 1. Update Table Content
+                $('#task-table-body').html(response.html).css('opacity', '1');
+                
+                // 2. Update ALL Task counts
+                $('.count-active').text(response.total_active);
+                $('.count-completed').text(response.completed);
+                $('.count-on-hold').text(response.on_hold);
+                $('.count-inactive').text(response.inactive);
+                
+                // 3. Update ALL Project sub-labels
+                $('.count-active-proj').text(response.active_projects);
+                $('.count-on-hold-proj').text(response.on_hold_projects);
+                $('.count-inactive-proj').text(response.inactive_projects);
+
+
+                $('#efficiency-val').text(response.efficiency); 
+
+                    // ADD THIS BLOCK TO UPDATE THE PROGRESS BAR
+                    const progressBar = $('#overall-progress-bar');
+                    if (progressBar.length && response.overall_completion !== undefined) {
+                        const newProgress = response.overall_completion + '%';
+                        progressBar.css('width', newProgress);
+                        progressBar.text(newProgress);
+                        progressBar.attr('aria-valuenow', response.overall_completion);
+                    }
+                
+                // 4. Update Efficiency
+                $('#efficiency-val').text(response.efficiency); 
+                
+                const titleText = activeView === 'team' ? 'Team Workspace' : 'Personal Workspace';
+                $('#view-title').text(titleText);
+            },
+            error: function() {
+                $('#task-table-body').css('opacity', '1');
+            }
+        });
+    }
+
+    $('#dashboard-search').on('keyup', function() {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(refreshDashboard, 300);
+    });
+
+    $('#clear-search').on('click', function() {
+        $('#dashboard-search').val('');
+        refreshDashboard();
+    });
+
+    $('.btn-view-toggle').on('click', function() {
+        $('.btn-view-toggle').removeClass('btn-primary shadow-sm').addClass('btn-light text-muted border-0');
+        $(this).addClass('btn-primary shadow-sm').removeClass('btn-light text-muted border-0');
+        refreshDashboard();
+    });
+
+    $(document).on('change', '.task-quick-toggle', function() {
+        const taskId = $(this).data('id');
+        const isChecked = $(this).is(':checked');
+        const newStatus = isChecked ? 'completed' : 'in_progress';
+
+        $.ajax({
+            url: `/tasks/${taskId}/status/`,
+            type: 'POST',
+            data: {
+                'status': newStatus,
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            headers: {'X-Requested-With': 'XMLHttpRequest'},
+            success: function(response) {
+                refreshDashboard(); 
+            }
+        });
+    });
+});
+
+
+
+function updateTaskProgress(taskId, progressValue) {
+    formData = new FormData();
+    formData.append('progress', progressValue);
+    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+    fetch(`/tasks/update-progress/${taskId}/`, {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            // 1. Update the individual task slider/status (already doing this)
+            const progressBar = document.getElementById('overall-progress-bar');
+            if (progressBar && data.overall_completion !== undefined) {
+                const newProgress = data.overall_completion + '%';
+                progressBar.style.width = newProgress;
+                progressBar.textContent = newProgress;
+                progressBar.setAttribute('aria-valuenow', data.overall_completion);
+            }
+            refreshDashboard();
+        }
+        
+    });
+}
+
+</script>
+{% endblock %}

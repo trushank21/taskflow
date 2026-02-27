@@ -1,0 +1,22 @@
+{% for task in recent_tasks %}
+<tr class="animate__animated animate__fadeIn">
+    <td>
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input task-toggle" 
+                   data-id="{{ task.pk }}" {% if task.status == 'completed' %}checked{% endif %}>
+        </div>
+    </td>
+    <td>
+        <a href="{% url 'tasks:task_detail' task.pk %}" class="fw-bold text-dark text-decoration-none">{{ task.title }}</a>
+        <div class="small text-muted">{{ task.project.title }}</div>
+    </td>
+    <td><span class="badge bg-light text-dark border">{{ task.get_priority_display }}</span></td>
+    <td class="status-cell">
+        <span class="badge {% if task.status == 'completed' %}bg-success{% else %}bg-primary{% endif %}">
+            {{ task.get_status_display }}
+        </span>
+    </td>
+</tr>
+{% empty %}
+<tr><td colspan="4" class="text-center py-4 text-muted">No tasks found.</td></tr>
+{% endfor %}

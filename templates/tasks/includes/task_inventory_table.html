@@ -1,0 +1,445 @@
+<div class="table-responsive" style="overflow: visible;">
+    <table class="table table-hover align-middle mb-0">
+        <thead class="bg-white border-bottom">
+            <tr>
+                <th class="ps-4 py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">No.</th>
+                <th class="ps-4 py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Assignee</th>
+                <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Task Info</th>
+                <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Project</th>
+                <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Status</th>
+                <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Due Date</th>
+                <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px; width: 140px;">Progress</th>
+                <th class="pe-4 py-3 text-muted small text-uppercase border-0 fw-bold text-end" style="font-size: 11px;">Actions</th>
+            </tr>
+        </thead>
+
+        <tbody>
+        {% for task in tasks %}
+
+            {% if task.project.status == 'inactive' or request.user.profile.role == 'observer' or request.user.profile.role == 'developer' and task.assigned_to != request.user and task.project.team_lead != request.user  %}
+                
+                {# --- LOCKED ROW LAYOUT --- #}
+                <tr id="task-row-{{ task.pk }}" class="bg-light-subtle opacity-75">
+                    <td class="ps-4"><span class="small text-muted">{{ forloop.counter }}</span></td>
+                    <td class="ps-4">
+                        <div class="position-relative d-inline-block">
+                            <img src="https://ui-avatars.com/api/?name={{ task.assigned_to.username }}&background=6366f1&color=fff" 
+                                 class="rounded-circle grayscale-filter shadow-sm" width="28" height="28">
+                            <span class="position-absolute bottom-0 end-0 bg-white rounded-circle shadow-sm d-flex align-items-center justify-content-center" style="width: 14px; height: 14px;">
+                                <i class="fas fa-lock text-muted" style="font-size: 8px;"></i>
+                            </span>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-lock text-muted me-2 small"></i>
+                            <div>
+                                <a href="{% url 'tasks:task_detail' task.pk %}" class="d-block fw-bold text-muted text-decoration-none mb-0">{{ task.title }}</a>
+                                <span class="badge-pro {% if task.priority == 'high' %}bg-high{% else %}bg-progress{% endif %}" style="font-size: 9px; padding: 1px 6px;">
+                                    {{ task.get_priority_display }}
+                                </span>
+                            </div>
+                        </div>
+                    </td>
+                    <td><span class="small fw-bold text-muted">{{ task.project.title }}</span></td>
+                    <td>
+                        <span class="badge-pro {% if task.status == 'completed' %}bg-done{% elif task.status == 'blocked' %}bg-danger text-white{% elif task.status == 'todo' %}bg-todo{% else %}bg-progress{% endif %}" 
+                              style="font-size: 10px; opacity: 0.6;">
+                            {{ task.get_status_display }}
+                        </span>
+                    </td>
+                    <td><span class="small fw-medium text-muted">{{ task.due_date|date:"M d"|default:"TBD" }}</span></td>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <input type="range" class="form-range" value="{{ task.progress }}" disabled>
+                            <span class="small text-muted fw-bold" style="font-size: 10px; width: 35px;">{{ task.progress }}%</span>
+                        </div>
+                    </td>
+                    <td class="pe-4 text-end">
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="{% url 'tasks:task_detail' task.pk %}" class="btn-action btn-detail"><i class="fas fa-expand-alt"></i></a>
+                            <span class="btn-action text-muted opacity-50" style="cursor: not-allowed;"><i class="fas fa-lock"></i></span>
+                        </div>
+                    </td>
+                </tr>
+
+            {% else %}
+                
+                {# --- EDITABLE ROW LAYOUT --- #}
+                <tr id="task-row-{{ task.pk }}" class="{% if task.status == 'blocked' %}bg-danger bg-opacity-10{% endif %}">
+                    <td class="ps-4"><span class="small text-muted">{{ forloop.counter }}</span></td>
+                    <td class="ps-4">
+                        <img src="https://ui-avatars.com/api/?name={{ task.assigned_to.username }}&background=6366f1&color=fff" class="rounded-circle shadow-sm" width="28" height="28">
+                    </td>
+                    <td>
+                        <a href="{% url 'tasks:task_detail' task.pk %}" class="d-block fw-bold text-dark text-decoration-none mb-0">{{ task.title }}</a>
+                        <span class="badge-pro {% if task.priority == 'high' %}bg-high{% else %}bg-progress{% endif %}" style="font-size: 9px; padding: 1px 6px;">
+                            {{ task.get_priority_display }}
+                        </span>
+                    </td>
+                    <td><span class="small fw-bold">{{ task.project.title }}</span></td>
+                    <td>
+                        <div class="dropdown">
+                            <button class="btn btn-sm dropdown-toggle border-0 p-0" type="button" data-bs-toggle="dropdown">
+                                <span class="badge-pro status-text-{{ task.pk }} {% if task.status == 'completed' %}bg-done{% elif task.status == 'blocked' %}bg-danger text-white{% elif task.status == 'todo' %}bg-todo{% else %}bg-progress{% endif %}" style="font-size: 10px;">
+                                    {{ task.get_status_display }}
+                                </span>
+                            </button>
+                            <ul class="dropdown-menu shadow-sm border-0" style="font-size: 11px;">
+                                <li><a class="dropdown-item status-update-link" href="#" data-url="{% url 'tasks:update_status' task.pk %}" data-pk="{{ task.pk }}" data-value="todo">TO DO</a></li>
+                                <li><a class="dropdown-item status-update-link" href="#" data-url="{% url 'tasks:update_status' task.pk %}" data-pk="{{ task.pk }}" data-value="in_progress">IN PROGRESS</a></li>
+                                <li><a class="dropdown-item status-update-link" href="#" data-url="{% url 'tasks:update_status' task.pk %}" data-pk="{{ task.pk }}" data-value="in_review">IN REVIEW</a></li>
+                                <li><a class="dropdown-item status-update-link" href="#" data-url="{% url 'tasks:update_status' task.pk %}" data-pk="{{ task.pk }}" data-value="blocked">BLOCKED</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item status-update-link text-success fw-bold" href="#" data-url="{% url 'tasks:update_status' task.pk %}" data-pk="{{ task.pk }}" data-value="completed">COMPLETED</a></li>
+                            </ul>
+                        </div>
+                    </td>
+                    <td><span class="small fw-medium">{{ task.due_date|date:"M d"|default:"TBD" }}</span></td>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <input type="range" class="form-range progress-slider" data-pk="{{ task.pk }}" value="{{ task.progress }}" min="0" max="100" step="5">
+                            <span class="small text-muted fw-bold progress-label-{{ task.pk }}" style="font-size: 10px; width: 35px;">{{ task.progress }}%</span>
+                        </div>
+                    </td>
+                    <td class="pe-4 text-end">
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="{% url 'tasks:task_detail' task.pk %}" class="btn-action btn-detail"><i class="fas fa-expand-alt"></i></a>
+                            <a href="{% url 'tasks:task_update' task.pk %}" class="btn-action btn-edit"><i class="fas fa-pen-nib"></i></a>
+                        </div>
+                    </td>
+                </tr>
+            {% endif %}
+
+        {% empty %}
+            <tr><td colspan="8" class="text-center py-5 text-muted small">No tasks found.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if is_paginated %}
+<nav class="mt-4 d-flex flex-column align-items-center">
+    <div class="text-muted small mb-2">
+        Page <strong>{{ page_obj.number }}</strong> of <strong>{{ page_obj.paginator.num_pages }}</strong>
+    </div>
+
+    <ul class="pagination pagination-sm justify-content-center mb-0">
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link ajax-page border-0 shadow-sm mx-1 rounded" href="#" data-page="{{ page_obj.previous_page_number }}">
+                    <i class="fas fa-chevron-left"></i>
+                </a>
+            </li>
+        {% else %}
+            <li class="page-item disabled"><span class="page-link border-0 opacity-50 mx-1 rounded"><i class="fas fa-chevron-left"></i></span></li>
+        {% endif %}
+
+        {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+                <li class="page-item active">
+                    <span class="page-link border-0 shadow-sm mx-1 rounded fw-bold">{{ num }}</span>
+                </li>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <li class="page-item">
+                    <a class="page-link ajax-page border-0 shadow-sm mx-1 rounded text-muted" href="#" data-page="{{ num }}">{{ num }}</a>
+                </li>
+            {% endif %}
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link ajax-page border-0 shadow-sm mx-1 rounded" href="#" data-page="{{ page_obj.next_page_number }}">
+                    <i class="fas fa-chevron-right"></i>
+                </a>
+            </li>
+        {% else %}
+            <li class="page-item disabled"><span class="page-link border-0 opacity-50 mx-1 rounded"><i class="fas fa-chevron-right"></i></span></li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+
+
+
+<style>
+/* Fix for dropdowns being cut off in responsive tables */
+.table-responsive {
+    overflow: visible !important;
+}
+
+#ajax-table-container {
+    overflow: visible !important;
+}
+
+.dropdown-menu {
+    z-index: 1050; /* Ensure it stays above other elements */
+    margin-top: 5px !important;
+}
+
+
+    .grayscale-filter { filter: grayscale(100%); }
+    .bg-light-subtle { background-color: #f8f9fa; }
+
+    .pagination .page-link {
+    background: #fff;
+    color: #6366f1;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.pagination .page-item.active .page-link {
+    background-color: #6366f1 !important;
+    color: white !important;
+}
+
+.pagination .page-link:hover:not(.active) {
+    background-color: #f8fafc;
+    color: #4f46e5;
+}
+
+.bg-info { background-color: #0dcaf0 !important; color: #000 !important; }
+</style>
+
+
+
+
+
+
+{% comment %} ----------------------------------------------------------------------- {% endcomment %}
+
+
+
+
+ {% comment %} <div class="table-responsive" style="overflow: visible;">
+    <table class="table table-hover align-middle mb-0">
+        <thead class="bg-white border-bottom">
+            <tr>
+                <th class="ps-4 py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">No.</th>
+                <th class="ps-4 py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Assignee</th>
+                <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Task Info</th>
+                <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Project</th>
+                <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Status</th>
+                <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Due Date</th>
+                <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px; width: 140px;">Progress</th>
+                <th class="pe-4 py-3 text-muted small text-uppercase border-0 fw-bold text-end" style="font-size: 11px;">Actions</th>
+            </tr>
+        </thead>
+
+        <tbody>
+        {% for task in tasks %}
+        <tr id="task-row-{{ task.pk }}" class="{% if task.project.status == 'inactive' %}bg-light-subtle opacity-75 grayscale-filter{% elif task.status == 'blocked' %}bg-danger bg-opacity-10{% endif %}">
+            <td class="ps-4"><span class="small text-muted">{{ forloop.counter }}</span></td>
+            <td class="ps-4">
+                <img src="https://ui-avatars.com/api/?name={{ task.assigned_to.username }}&background=6366f1&color=fff" class="rounded-circle shadow-sm" width="28" height="28">
+            </td>
+            <td>
+                <div class="d-flex align-items-center">
+                    {% if task.project.status == 'inactive' %}<i class="fas fa-lock text-danger me-2"></i>{% endif %}
+                    <div>
+                        <a href="{% url 'tasks:task_detail' task.pk %}" class="d-block fw-bold text-dark text-decoration-none mb-0">{{ task.title }}</a>
+                        <span class="badge-pro {% if task.priority == 'high' %}bg-high{% else %}bg-progress{% endif %}" style="font-size: 9px; padding: 1px 6px;">
+                            {{ task.get_priority_display }}
+                        </span>
+                    </div>
+                </div>
+            </td>
+            <td><span class="small fw-bold">{{ task.project.title }}</span></td>
+            <td>
+                <div class="dropdown">
+                    <button class="btn btn-sm dropdown-toggle border-0 p-0" type="button" data-bs-toggle="dropdown" 
+                            {% if task.project.status == 'inactive' or request.user.profile.role == 'developer' and task.assigned_to != request.user %}disabled{% endif %}>
+                        <span class="badge-pro status-text-{{ task.pk }} {% if task.status == 'completed' %}bg-done{% elif task.status == 'blocked' %}bg-danger text-white{% elif task.status == 'todo' %}bg-todo{% else %}bg-progress{% endif %}" style="font-size: 10px;">
+                            {{ task.get_status_display }}
+                        </span>
+                    </button>
+                    <ul class="dropdown-menu shadow-sm border-0" style="font-size: 11px;">
+                        <li><a class="dropdown-item status-update-link" href="#" data-url="{% url 'tasks:update_status' task.pk %}" data-pk="{{ task.pk }}" data-value="todo">TO DO</a></li>
+                        <li><a class="dropdown-item status-update-link" href="#" data-url="{% url 'tasks:update_status' task.pk %}" data-pk="{{ task.pk }}" data-value="in_progress">IN PROGRESS</a></li>
+                        <li><a class="dropdown-item status-update-link" href="#" data-url="{% url 'tasks:update_status' task.pk %}" data-pk="{{ task.pk }}" data-value="blocked">BLOCKED</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item status-update-link text-success fw-bold" href="#" data-url="{% url 'tasks:update_status' task.pk %}" data-pk="{{ task.pk }}" data-value="completed">COMPLETED</a></li>
+                    </ul>
+                </div>
+            </td>
+            <td><span class="small fw-medium">{{ task.due_date|date:"M d"|default:"TBD" }}</span></td>
+            <td>
+                <div class="d-flex align-items-center gap-2">
+                    <input type="range" class="form-range progress-slider" data-pk="{{ task.pk }}" value="{{ task.progress }}" min="0" max="100" step="5"
+                           {% if task.project.status == 'inactive' or request.user.profile.role == 'developer' and task.assigned_to != request.user %}disabled{% endif %}>
+                    <span class="small text-muted fw-bold progress-label-{{ task.pk }}" style="font-size: 10px; width: 35px;">{{ task.progress }}%</span>
+                </div>
+            </td>
+            <td class="pe-4 text-end">
+                <div class="d-flex justify-content-end gap-2">
+                    <a href="{% url 'tasks:task_detail' task.pk %}" class="btn-action btn-detail"><i class="fas fa-expand-alt"></i></a>
+                    {% if task.project.status != 'inactive' %}
+                    <a href="{% url 'tasks:task_update' task.pk %}" class="btn-action btn-edit"><i class="fas fa-pen-nib"></i></a>
+                    {% endif %}
+                </div>
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" class="text-center py-5 text-muted small">No tasks found.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>   {% endcomment %}
+
+
+
+
+
+
+{% comment %} ----------------------------------------------------------------- {% endcomment %}
+{% comment %} 
+
+<div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+        <thead class="bg-white border-bottom">
+            <tr>
+                <th class="ps-4 py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">No.</th>
+                <th class="ps-4 py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Assignee</th>
+                <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Task Info</th>
+                <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Project Name</th>
+                <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Status</th>
+                <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Change Status</th>
+                <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Due Date</th>
+                <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px; width: 140px;">Progress</th>
+                <th class="pe-4 py-3 text-muted small text-uppercase border-0 fw-bold text-end" style="font-size: 11px;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for task in tasks %}
+            {# Visual Rules: Grayscale for Inactive, Red tint for Blocked, Normal for Active/OnHold #}
+            <tr class="animate__animated animate__fadeIn 
+                {% if task.project.status == 'inactive' %}bg-light-subtle opacity-75 grayscale-filter
+                {% elif task.status == 'blocked' %}bg-danger bg-opacity-10{% endif %}">
+                <td class="ps-4"><span class="small text-muted">{{ forloop.counter }}</span></td>
+                <td class="ps-4">
+                    <img src="https://ui-avatars.com/api/?name={{ task.assigned_to.username }}&background=6366f1&color=fff" 
+                         class="rounded-circle shadow-sm border border-2 border-white" width="28" height="28" title="{{ task.assigned_to.username }}">
+                </td>
+
+                <td>
+                    <div class="d-flex align-items-center">
+                        {% if task.project.status == 'inactive' %}
+                            <i class="fas fa-lock text-danger me-2" title="Project Locked (Inactive)"></i>
+                        {% elif task.status == 'blocked' %}
+                            <i class="fas fa-exclamation-triangle text-danger me-2" title="Task is Blocked"></i>
+                        {% endif %}
+                        <div>
+                            <a href="{% url 'tasks:task_detail' task.pk %}" class="d-block fw-bold text-dark text-decoration-none mb-0">{{ task.title }}</a>
+                            <span class="badge-pro {% if task.priority == 'high' %}bg-high{% else %}bg-progress{% endif %}" style="font-size: 9px; padding: 1px 6px;">
+                                {{ task.get_priority_display }}
+                            </span>
+                        </div>
+                    </div>
+                </td>
+
+                
+
+                <td>
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-folder text-muted me-2" style="font-size: 10px;"></i>
+                        
+                        <span class="small fw-bold {% if task.project.status == 'inactive' %}text-muted{% else %}text-dark{% endif %}">
+                            {{ task.project.title }}
+                        </span>
+
+                        {% if task.project.status == 'inactive' %}
+                            <span class="ms-2 badge bg-warning text-dark px-2 opacity-100" style="font-size: 8px; font-weight: 800;">INACTIVE</span> 
+                        {% elif task.project.status == 'active' %}
+                            <span class="ms-2 badge bg-progress text-progress px-2" style="font-size: 8px; font-weight: 800;">ACTIVE</span> 
+                        {% elif task.project.status == 'on_hold' %}
+                            <span class="ms-2 badge bg-warning text-dark px-2" style="font-size: 8px; font-weight: 800;">ON HOLD</span>
+                        {% endif %}
+                    </div>
+                </td>
+
+                
+
+
+
+
+
+
+
+                <td>
+                    <span class="badge-pro 
+                        {% if task.status == 'completed' %}bg-done
+                        {% elif task.status == 'blocked' %}bg-danger text-white
+                        {% elif task.status == 'todo' %}bg-todo
+                        {% else %}bg-progress{% endif %}" style="font-size: 10px;">
+                        {{ task.get_status_display }}
+                    </span>
+                </td>
+
+                <td><span class="small text-dark fw-medium">{{ task.due_date|date:"M d"|default:"TBD" }}</span></td>
+
+                <td>
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="progress flex-grow-1" style="height: 5px; border-radius: 10px; background-color: #f1f5f9;">
+                            <div class="progress-bar {% if task.status == 'blocked' %}bg-danger{% else %}bg-primary{% endif %}" 
+                                 role="progressbar" style="width: {{ task.progress }}%"></div>
+                        </div>
+                        <span class="small text-muted fw-bold" style="font-size: 10px;">{{ task.progress }}%</span>
+                    </div>
+                </td>
+
+                <td class="pe-4 text-end">
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="{% url 'tasks:task_detail' task.pk %}" class="btn-action btn-detail" title="View"><i class="fas fa-expand-alt"></i></a>
+                        
+                        {% if task.project.status != 'inactive' %}
+                            {% if request.user.profile.role != 'developer' or task.assigned_to == request.user %}
+                                <a href="{% url 'tasks:task_update' task.pk %}" class="btn-action btn-edit" title="Edit"><i class="fas fa-pen-nib"></i></a>
+                            {% endif %}
+                        {% else %}
+                            <span class="btn-action bg-light text-muted border-0 opacity-50" title="Locked"><i class="fas fa-lock"></i></span>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="7" class="text-center py-5 text-muted small">No tasks found matching your current workspace view.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if is_paginated %}
+<nav class="mt-4">
+    <ul class="pagination pagination-sm justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item"><a class="page-link ajax-page text-muted border-0" href="#" data-page="{{ page_obj.previous_page_number }}"><i class="fas fa-chevron-left"></i></a></li>
+        {% endif %}
+        {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+                <li class="page-item active"><span class="page-link bg-primary border-0 shadow-sm">{{ num }}</span></li>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <li class="page-item"><a class="page-link ajax-page text-muted border-0" href="#" data-page="{{ num }}">{{ num }}</a></li>
+            {% endif %}
+        {% endfor %}
+        {% if page_obj.has_next %}
+            <li class="page-item"><a class="page-link ajax-page text-muted border-0" href="#" data-page="{{ page_obj.next_page_number }}"><i class="fas fa-chevron-right"></i></a></li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+<style>
+    .btn-action { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; transition: all 0.2s ease; border: 1px solid #edf2f7; }
+    .btn-detail { background: #f8fafc; color: #64748b; }
+    .btn-detail:hover { background: #6366f1; color: white; border-color: #6366f1; }
+    .btn-edit { background: #fffbeb; color: #d97706; }
+    .btn-edit:hover { background: #f59e0b; color: white; border-color: #f59e0b; }
+    .grayscale-filter { filter: grayscale(1); }
+    .bg-high { background-color: #fee2e2; color: #ef4444; }
+</style>  
+ {% endcomment %}

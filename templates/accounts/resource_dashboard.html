@@ -1,0 +1,196 @@
+{% extends 'base.html' %}
+
+{% block page_header %}Resource Allocation Matrix{% endblock %}
+
+{% block content %}
+<style>
+    /* Status & Project Styles remain the same as your previous high-end UI */
+    .status-badge { padding: 6px 16px; border-radius: 50px; font-weight: 600; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 8px; border: 1px solid transparent; }
+    .status-available { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
+    .status-healthy { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+    .status-overloaded { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+    .bg-available { background-color: #22c55e; animation: pulse-green 2s infinite; }
+    .bg-healthy { background-color: #3b82f6; }
+    .bg-overloaded { background-color: #ef4444; animation: pulse-red 2s infinite; }
+    
+    /* Pagination Styling */
+    .pagination-container { background: white; padding: 1rem 1.5rem; border-top: 1px solid #edf2f7; }
+    .page-link { border: none; color: #64748b; margin: 0 2px; border-radius: 8px !important; transition: all 0.3s; }
+    .page-item.active .page-link { background-color: var(--primary) !important; color: white !important; }
+    .page-link:hover { background-color: var(--primary-light); color: var(--primary); }
+
+    @keyframes pulse-green { 0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); } 70% { box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); } 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); } }
+    @keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); } 70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
+</style>
+
+<div class="container-fluid animate__animated animate__fadeIn">
+    
+    <div class="card-custom border-0 shadow-sm mb-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 p-2">
+            <div class="search-container flex-grow-1 position-relative">
+                <i class="fas fa-search position-absolute" style="left: 15px; top: 12px; color: #9ca3af;"></i>
+                <input type="text" id="smartSearch" class="form-control ps-5 py-2 border-light bg-light" style="border-radius: 10px;" placeholder="Search name, email, or project...">
+            </div>
+            <div class="d-flex gap-2">
+                <select id="roleFilter" class="form-select border-light bg-light" style="width: 160px; border-radius: 10px;">
+                    <option value="ALL">All Roles</option>
+                    <option value="ADMINISTRATOR">Administrators</option>
+                    <option value="MANAGER">Managers</option>
+                    <option value="DEVELOPER">Developers</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-custom p-0 overflow-hidden shadow-sm border-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="resourceTable">
+                <thead class="bg-light">
+                    <tr class="text-uppercase text-muted" style="font-size: 0.7rem; letter-spacing: 1px;">
+                        <th class="text-center">No.</th>
+                        <th class="px-4">Team Member</th>
+                        <th>Projects</th>
+                        <th class="text-center">Distribution</th>
+                        <th class="text-center">Availability</th>
+                    </tr>
+                </thead>
+                <tbody id="resourceBody">
+                    {% for user in users_report %}
+                    <tr class="user-row" 
+                        data-role="{{ user.profile.get_role_display|upper }}" 
+                        data-content="{{ user.get_full_name|lower }} {{ user.username|lower }} {{ user.email|lower }} {% for p in user.projects_assigned.all %}{{ p.title|lower }} {% endfor %}">
+                        <td class="text-center">{{forloop.counter}}</td>
+                        <td class="ps-4">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-sm me-3 bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold shadow-sm" style="width: 40px; height: 40px;">
+                                    {{ user.username|slice:":1"|upper }}
+                                </div>
+                                <div>
+                                    <div class="fw-bold text-dark">{{ user.get_full_name|default:user.username }}</div>
+                                    <div class="text-muted small" style="font-size: 0.75rem;">{{ user.profile.get_role_display }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="d-flex flex-wrap gap-2 py-2" style="max-width: 350px;">
+                                {% for project in user.projects_assigned.all %}
+                                    <span class="project-pill small border px-2 py-1 rounded bg-white">{{ project.title }}</span>
+                                {% empty %}
+                                    <span class="text-muted small italic">Unassigned</span>
+                                {% endfor %}
+                            </div>
+                        </td>
+                        <td class="text-center">
+                            <div class="d-flex justify-content-center gap-3">
+                                <div><span class="d-block fw-bold text-dark">{{ user.todo_count }}</span><span class="text-muted" style="font-size: 0.6rem;">TODO</span></div>
+                                <div class="border-start ps-3"><span class="d-block fw-bold text-primary">{{ user.in_progress_count }}</span><span class="text-muted" style="font-size: 0.6rem;">In Progress</span></div>
+                                <div class="border-start ps-3"><span class="d-block fw-bold text-success">{{ user.completed_count }}</span><span class="text-muted" style="font-size: 0.6rem;">DONE</span></div>
+                            </div>
+                        </td>
+                        <td class="text-center">
+                            {% if user.total_active == 0 %}
+                                <div class="status-badge status-available"><span class="dot bg-available"></span> Available</div>
+                            {% elif user.total_active <= 4 %}
+                                <div class="status-badge status-healthy"><span class="dot bg-healthy"></span> Healthy</div>
+                            {% else %}
+                                <div class="status-badge status-overloaded"><span class="dot bg-overloaded"></span> Overloaded</div>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            
+            <div id="emptyState" class="text-center py-5 d-none">
+                <i class="fas fa-users-slash fa-3x text-light mb-3"></i>
+                <h5 class="text-dark fw-bold">No results found</h5>
+            </div>
+        </div>
+
+        <div class="pagination-container d-flex justify-content-between align-items-center">
+            <div class="text-muted small" id="paginationInfo">
+                Showing 1 to 5 of 12 members
+            </div>
+            <nav>
+                <ul class="pagination pagination-sm mb-0" id="paginationList">
+                    </ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+<script>
+    const rowsPerPage = 5; // Change this to show more/less per page
+    let currentPage = 1;
+    let filteredRows = [];
+
+    const searchInput = document.getElementById('smartSearch');
+    const roleFilter = document.getElementById('roleFilter');
+    const allRows = Array.from(document.querySelectorAll('.user-row'));
+    const paginationList = document.getElementById('paginationList');
+    const paginationInfo = document.getElementById('paginationInfo');
+
+    function updateTable() {
+        const query = searchInput.value.toLowerCase();
+        const role = roleFilter.value.toUpperCase();
+
+        // 1. Filter the rows
+        filteredRows = allRows.filter(row => {
+            const content = row.getAttribute('data-content');
+            const userRole = row.getAttribute('data-role');
+            return content.includes(query) && (role === 'ALL' || userRole.includes(role));
+        });
+
+        // 2. Handle empty state
+        if (filteredRows.length === 0) {
+            document.getElementById('resourceTable').classList.add('d-none');
+            document.getElementById('emptyState').classList.remove('d-none');
+            document.querySelector('.pagination-container').classList.add('d-none');
+        } else {
+            document.getElementById('resourceTable').classList.remove('d-none');
+            document.getElementById('emptyState').classList.add('d-none');
+            document.querySelector('.pagination-container').classList.remove('d-none');
+            renderPagination();
+        }
+    }
+
+    function renderPagination() {
+        const totalPages = Math.ceil(filteredRows.length / rowsPerPage);
+        if (currentPage > totalPages) currentPage = totalPages || 1;
+
+        // Hide all rows first
+        allRows.forEach(row => row.style.display = 'none');
+
+        // Show only rows for current page
+        const start = (currentPage - 1) * rowsPerPage;
+        const end = start + rowsPerPage;
+        const pageRows = filteredRows.slice(start, end);
+        pageRows.forEach(row => row.style.display = '');
+
+        // Update Info text
+        paginationInfo.innerText = `Showing ${start + 1} to ${Math.min(end, filteredRows.length)} of ${filteredRows.length} members`;
+
+        // Generate Buttons
+        let paginationHTML = '';
+        for (let i = 1; i <= totalPages; i++) {
+            paginationHTML += `
+                <li class="page-item ${i === currentPage ? 'active' : ''}">
+                    <a class="page-link" href="#" onclick="changePage(${i})">${i}</a>
+                </li>`;
+        }
+        paginationList.innerHTML = paginationHTML;
+    }
+
+    window.changePage = function(page) {
+        currentPage = page;
+        renderPagination();
+    };
+
+    searchInput.addEventListener('input', () => { currentPage = 1; updateTable(); });
+    roleFilter.addEventListener('change', () => { currentPage = 1; updateTable(); });
+
+    // Initial Load
+    updateTable();
+</script>
+{% endblock %}

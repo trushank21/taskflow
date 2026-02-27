@@ -1,0 +1,221 @@
+{% extends 'base.html' %}
+
+{% block title %}My Profile | TaskFlow{% endblock %}
+{% block page_header %}My Profile{% endblock %}
+
+{% block content %}
+<div class="animate__animated animate__fadeIn">
+    
+    <div class="card-custom p-0 overflow-hidden mb-4 border-0 shadow-sm">
+        <div class="profile-cover" style="height: 120px; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);"></div>
+        <div class="px-4 pb-4">
+            <div class="d-flex align-items-end justify-content-between flex-wrap gap-3" style="margin-top: -40px;">
+                <div class="d-flex align-items-end flex-wrap gap-3">
+                    <div class="position-relative">
+                         {% if user.profile.avatar %}
+                            <img src="{{ user.profile.avatar.url }}" 
+                                 class="rounded-circle border border-4 border-white shadow-sm" width="100" height="100">
+                        {% else %}
+                        <img src="https://ui-avatars.com/api/?name={{ user.username }}&background=fff&color=6366f1&size=128" 
+                             class="rounded-circle border border-4 border-white shadow-sm" width="100" height="100">
+                        {% endif %}
+                        <span class="position-absolute bottom-0 end-0 bg-success border border-white rounded-circle p-2" title="Online"></span>
+                    </div>
+                    <div class="mb-2">
+                        <h3 class="fw-bold text-dark mb-0">{{ user.get_full_name|default:user.username }}</h3>
+                        <p class="text-muted small mb-0">@{{ user.username }} • {{ profile.get_role_display|default:"Team Member" }}</p>
+                    </div>
+                </div>
+                <div class="mb-2">
+                    <a href="{% url 'accounts:profile_edit' %}" class="btn btn-primary-custom btn-sm px-4">
+                        <i class="fas fa-edit me-2"></i>Edit Profile
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 id="profile-stat-header" class="fw-bold text-muted small text-uppercase mb-0" style="letter-spacing: 1px;">
+                    {% if view_mode == 'team' %}Team Activity Overview{% else %}Personal Performance{% endif %}
+                </h6>
+                <div class="btn-group bg-white p-1 rounded-3 shadow-sm border" style="height: 36px;">
+                    <a href="?view=personal" class="btn btn-sm btn-profile-toggle d-flex align-items-center px-3 fw-bold {% if view_mode != 'team' %}btn-primary shadow-sm{% else %}btn-light text-muted border-0{% endif %}" style="font-size: 11px;" data-view="personal">
+                        My Stats
+                    </a>
+                    {% if user.profile.role == 'manager' or user.profile.role == 'admin' or user.profile.role == 'developer' or user.profile.role != 'observer'  %}
+                    <a href="?view=team" class="btn btn-sm btn-profile-toggle d-flex align-items-center px-3 fw-bold {% if view_mode == 'team' %}btn-primary shadow-sm{% else %}btn-light text-muted border-0{% endif %}" style="font-size: 11px;" data-view="team">
+                        Team Stats
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div id="profile-stats-row" class="row g-3 mb-4 text-center">
+                <div class="col-md-3 col-6">
+                    <div class="card-custom py-3 border shadow-none bg-white">
+                        <h4 id="stat-total" class="fw-bold text-primary mb-0">{{ total_tasks_count|default:"0" }}</h4>
+                        <span class="text-muted small fw-bold text-uppercase" style="font-size: 10px;">Total Tasks</span>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6">
+                    <div class="card-custom py-3 border shadow-none bg-white">
+                        <h4 id="stat-active" class="fw-bold text-warning mb-0">{{ in_progress_tasks_count|default:"0" }}</h4>
+                        <span class="text-muted small fw-bold text-uppercase" style="font-size: 10px;">Active Work</span>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6">
+                    <div class="card-custom py-3 border shadow-none bg-white">
+                        <h4 id="stat-completed" class="fw-bold text-success mb-0">{{ completed_tasks_count|default:"0" }}</h4>
+                        <span class="text-muted small fw-bold text-uppercase" style="font-size: 10px;">Completed</span>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6">
+                    <div class="card-custom py-3 border shadow-none bg-white">
+                        <h4 id="stat-blocked" class="fw-bold text-danger mb-0">{{ blocked_tasks_count|default:"0" }}</h4>
+                        <span class="text-muted small fw-bold text-uppercase" style="font-size: 10px;">Blocked</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-custom mb-4 shadow-sm border-0">
+                <h6 class="fw-bold text-dark mb-3"><i class="fas fa-id-card text-primary me-2"></i>About Me</h6>
+                <p class="text-muted leading-relaxed">
+                    {{ profile.bio|default:"No bio provided. Update your profile to tell your team about yourself!" }}
+                </p>
+                <hr class="my-4 opacity-25">
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <label class="small text-muted d-block fw-bold text-uppercase mb-1">Email Address</label>
+                        <span class="text-dark fw-medium">{{ user.email }}</span>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="small text-muted d-block fw-bold text-uppercase mb-1">Phone Number</label>
+                        <span class="text-dark fw-medium">{{ profile.phone|default:"Not specified" }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-custom shadow-sm border-0">
+                <h6 class="fw-bold text-dark mb-4"><i class="fas fa-briefcase text-primary me-2"></i>Professional Details</h6>
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <div class="p-3 bg-light rounded-3">
+                            <label class="small text-muted d-block fw-bold text-uppercase mb-1">Department</label>
+                            <span class="fw-bold text-dark">{{ profile.department|default:"Not specified" }}</span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-3 bg-light rounded-3">
+                            <label class="small text-muted d-block fw-bold text-uppercase mb-1">Current Role</label>
+                            <span class="fw-bold text-dark">{{ profile.get_role_display|default:"Team Member" }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card-custom shadow-sm border-0">
+                <h6 class="fw-bold text-dark mb-4"><i class="fas fa-shield-alt text-primary me-2"></i>Account Security</h6>
+                
+                <div class="mb-4">
+                    <label class="small text-muted d-block mb-1">Member Since</label>
+                    <div class="d-flex align-items-center">
+                        <i class="far fa-calendar-alt text-muted me-2"></i>
+                        <span class="fw-medium text-dark">{{ user.date_joined|date:"F d, Y" }}</span>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="small text-muted d-block mb-1">Last System Access</label>
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-history text-muted me-2"></i>
+                        <span class="fw-medium text-dark">
+                            {% if user.last_login %}{{ user.last_login|date:"M d, H:i" }}{% else %}First session{% endif %}
+                        </span>
+                    </div>
+                </div>
+
+                <hr class="my-4 opacity-25">
+
+                <div class="text-center">
+                    <p class="small text-muted mb-3">Keep your account secure by reviewing your login history regularly.</p>
+                    <a href="{% url 'accounts:password_change' %}" class="btn btn-light btn-sm w-100 border fw-bold text-muted">
+                        Security Settings
+                    </a>
+                </div>
+            </div>
+
+            <div class="card-custom bg-dark text-white mt-4 shadow-lg border-0">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="bg-white bg-opacity-10 p-2 rounded me-3">
+                        <i class="fas fa-lightbulb text-warning"></i>
+                    </div>
+                    <h6 class="fw-bold mb-0">Productivity Tip</h6>
+                </div>
+                <p class="small text-white-50 mb-0">
+                    Active work strictly shows tasks from active projects. Completed tasks are tracked across your entire history.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script>
+$(document).ready(function() {
+    $('.btn-profile-toggle').on('click', function(e) {
+        e.preventDefault(); // Stop default reload
+        
+        const $btn = $(this);
+        const url = $btn.attr('href');
+        const $statsArea = $('#profile-stats-row');
+        const $header = $('#profile-stat-header');
+
+        $statsArea.css('opacity', '0.4');
+
+        $.ajax({
+            url: url,
+            headers: {'X-Requested-With': 'XMLHttpRequest'},
+            success: function(res) {
+                // 1. Update values
+                $('#stat-total').text(res.total);
+                $('#stat-active').text(res.active);
+                $('#stat-completed').text(res.completed);
+                $('#stat-blocked').text(res.blocked);
+                $header.text(res.header_text);
+
+                // 2. UI Update
+                $('.btn-profile-toggle').removeClass('btn-primary shadow-sm active').addClass('btn-light text-muted border-0');
+                $btn.addClass('btn-primary shadow-sm active').removeClass('btn-light text-muted border-0');
+
+                // 3. URL Sync
+                window.history.pushState({path: url}, '', url);
+                $statsArea.css('opacity', '1');
+            },
+            error: function(xhr) {
+                $statsArea.css('opacity', '1');
+                if (xhr.status === 403) {
+                    alert(xhr.responseJSON.message || 'Access Denied');
+                } else {
+                    alert('Error switching view. Please try again.');
+                }
+            }
+        });
+        return false; // Extra safety to prevent reload
+    });
+});
+</script>
+
+<style>
+    .profile-cover { border-radius: 12px 12px 0 0; }
+    .leading-relaxed { line-height: 1.7; }
+    .card-custom { transition: transform 0.2s ease; border-radius: 1rem; border: 1px solid #edf2f7; padding: 1.5rem; background: #fff; }
+    .btn-primary-custom { background-color: #6366f1; color: white; border-radius: 8px; font-weight: bold; }
+    .btn-primary-custom:hover { background-color: #4f46e5; color: white; }
+</style>
+{% endblock %}

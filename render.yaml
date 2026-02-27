@@ -1,0 +1,38 @@
+services:
+  # The Django Web App
+  - type: web
+    name: taskflow-web
+    runtime: python
+    plan: free
+    buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --no-input && python manage.py migrate"
+    startCommand: "gunicorn taskflow.wsgi:application"
+    envVars:
+      - key: DATABASE_URL
+        sync: false # We will paste the Aiven link in the dashboard
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: taskflow-redis
+          property: connectionString
+
+  # The Celery Worker
+  - type: worker
+    name: taskflow-worker
+    runtime: python
+    plan: free
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "celery -A taskflow worker --loglevel=info"
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: taskflow-redis
+          property: connectionString
+
+  # Redis for Celery
+  - type: redis
+    name: taskflow-redis
+    plan: free
+    ipAllowList: [] # Allow internal access

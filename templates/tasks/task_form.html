@@ -1,0 +1,358 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if action == 'Create' %}New Task{% else %}Edit Task{% endif %} | TaskFlow{% endblock %}
+{% block page_header %}Task Inventory{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center animate__animated animate__fadeInUp">
+    <div class="col-lg-9 col-xl-8">
+        
+        <div class="d-flex align-items-center justify-content-between mb-4">
+            <div>
+                <h4 class="fw-bold text-dark mb-1">{% if action == 'Create' %}Create a New Task{% else %}Update Task Details{% endif %}</h4>
+                <p class="text-muted small mb-0">Fill in the information below to manage your project workflow.</p>
+            </div>
+            <a href="{% url 'tasks:task_list' %}" class="btn btn-light btn-sm border text-muted fw-bold">
+                <i class="fas fa-times me-1"></i> Discard
+            </a>
+        </div>
+
+        <div class="card-custom shadow-sm border-0">
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger border-0 shadow-sm mb-4">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+                </div>
+            {% endif %}
+
+            {% if task.project.status == 'on_hold' or task.project.status == 'inactive' %}
+            <div class="alert alert-warning border-0 shadow-sm mb-4 d-flex align-items-center">
+                <i class="fas fa-pause-circle fs-4 me-3"></i>
+                <div>
+                    <strong class="d-block">Project is {{ task.project.get_status_display }}</strong>
+                    <span class="small">Changes may be restricted or visually marked as "Blocked" in the inventory.</span>
+                </div>
+            </div>
+            {% endif %}
+
+            <form method="post" novalidate id="task-edit-form" autocomplete="off">
+                {% csrf_token %}
+
+                <div class="mb-5">
+                    <h6 class="text-primary fw-bold text-uppercase small mb-4 pb-2 border-bottom">
+                        <i class="fas fa-info-circle me-2"></i>Core Information
+                    </h6>
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold text-dark">Task Title <span class="text-danger">*</span></label>
+                        {{ form.title }}
+                        {% if form.title.errors %}<div class="invalid-feedback d-block">{{ form.title.errors.0 }}</div>{% endif %}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold text-dark">Detailed Description</label>
+                        {{ form.description }}
+                    </div>
+                </div>
+
+                <div class="mb-5">
+                    <h6 class="text-primary fw-bold text-uppercase small mb-4 pb-2 border-bottom">
+                        <i class="fas fa-user-edit me-2"></i>Assignment & Logic
+                    </h6>
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold text-dark">Target Project <span class="text-danger">*</span></label>
+                            {{ form.project }}
+                            {% if form.project.errors %}
+                                <div class="invalid-feedback d-block">{{ form.project.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold text-dark">Assigned Member</label>
+                            {{ form.assigned_to }}
+                            {% if form.assigned_to.errors %}
+                                <div class="invalid-feedback d-block">{{ form.assigned_to.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-5">
+                    <h6 class="text-primary fw-bold text-uppercase small mb-4 pb-2 border-bottom">
+                        <i class="fas fa-sliders-h me-2"></i>Status & Priority
+                    </h6>
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold text-dark">Current Status</label>
+                            {{ form.status }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold text-dark">Task Priority</label>
+                            {{ form.priority }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-5">
+                    <h6 class="text-primary fw-bold text-uppercase small mb-4 pb-2 border-bottom">
+                        <i class="fas fa-calendar-alt me-2"></i>Timeline & Metrics
+                    </h6>
+                    <div class="row g-4 mb-4">
+                        <div class="col-md-6 col-lg-4">
+                            <label class="form-label fw-semibold text-dark">Deadline</label>
+                            {{ form.due_date }}
+                        </div>
+                        <div class="col-md-6 col-lg-4">
+                            <label class="form-label fw-semibold text-dark">Est. Hours</label>
+                            {{ form.estimated_hours }}
+                        </div>
+                        <div class="col-md-6 col-lg-4">
+                            <label class="form-label fw-semibold text-dark">Actual Hours</label>
+                            {{ form.actual_hours }}
+                            <div id="hours-warning" class="text-danger small fw-bold mt-1" style="display: none;">
+                                <i class="fas fa-exclamation-triangle me-1"></i> Exceeds estimate!
+                            </div>
+                            {% if form.actual_hours.errors %}<div class="invalid-feedback d-block">{{ form.actual_hours.errors.0 }}</div>{% endif %}
+                        </div>
+                      <div class="row align-items-end mt-3"> 
+                        <div class="col-md-6 mb-3"> 
+                            <label class="form-label fw-semibold text-dark mb-3">Progress (%)</label>
+                            <div class="position-relative pt-2">
+                                <div id="slider-bubble" class="badge bg-primary position-absolute shadow-sm" 
+                                    style="top: -25px; transform: translateX(-50%); transition: left 0.1s ease-out;">
+                                    {{ form.progress.value|default:0 }}%
+                                </div>
+                                {{ form.progress }}
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold text-dark">Searchable Tags</label>
+                            {{ form.tags }}
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="bg-light p-4 rounded-3 d-flex justify-content-end gap-3 border">
+                    <a href="{% url 'tasks:task_list' %}" class="btn btn-outline-secondary px-4 fw-bold">Cancel</a>
+                    <button type="submit" class="btn btn-primary-custom px-5 fw-bold shadow-sm">
+                        {% if action == 'Create' %}Create Task{% else %}Save Changes{% endif %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card-custom { background: #fff; padding: 2rem; border-radius: 1rem; border: 1px solid #edf2f7; }
+    .form-range { -webkit-appearance: none; width: 100%; height: 8px; border-radius: 10px; background-repeat: no-repeat; background-size: 0% 100%; }
+    .form-range::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; background: #fff; border: 3px solid currentColor; border-radius: 50%; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.15); }
+    .form-control, .form-select { padding: 0.65rem 1rem; border: 1.5px solid #e5e7eb; border-radius: 10px; font-size: 0.95rem; }
+    .btn-primary-custom { background: #6366f1; color: white; border: none; border-radius: 10px; }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+    // ... existing slider/status code ...
+
+    const estHoursInput = document.querySelector('input[name="estimated_hours"]');
+    const actualHoursInput = document.querySelector('input[name="actual_hours"]');
+    const hoursWarning = document.getElementById('hours-warning');
+
+    function checkHours() {
+        if (!estHoursInput || !actualHoursInput) return;
+
+        const est = parseFloat(estHoursInput.value) || 0;
+        const actual = parseFloat(actualHoursInput.value) || 0;
+
+        // Show warning if actual hours are more than 10% over the estimate
+        if (est > 0 && actual > (est * 1.1)) {
+            hoursWarning.style.display = 'block';
+            actualHoursInput.classList.add('border-danger', 'text-danger');
+        } else {
+            hoursWarning.style.display = 'none';
+            actualHoursInput.classList.remove('border-danger', 'text-danger');
+        }
+    }
+
+    // Check when user types in actual hours
+    actualHoursInput.addEventListener('input', checkHours);
+    
+    // Run once on load in case the task is already over hours
+    checkHours();
+});
+
+{% comment %} document.addEventListener('DOMContentLoaded', function() {
+    const slider = document.querySelector('input[type="range"]');
+    const bubble = document.getElementById('slider-bubble');
+    const statusDropdown = document.querySelector('select[name="status"]');
+    const taskForm = document.getElementById('task-edit-form');
+
+    function syncUI() {
+        if (!slider || !statusDropdown) return;
+        const val = parseInt(slider.value);
+        const currentStatus = statusDropdown.value;
+        
+        // Style Logic (Bubble and Colors)
+        bubble.innerHTML = val + "%";
+        bubble.style.left = `calc(${val}% + (${8 - val * 0.15}px))`;
+        let color = val < 30 ? "#ef4444" : (val < 70 ? "#f59e0b" : "#10b981");
+        slider.style.backgroundSize = val + '% 100%';
+        slider.style.backgroundImage = `linear-gradient(${color}, ${color})`;
+        bubble.style.backgroundColor = color;
+
+        // --- THE FIX: Intelligent Status Logic ---
+        
+        // If the user manually chose a status, don't let the slider override it
+        if (isManualStatusChange || currentStatus === 'blocked') {
+            return; 
+        }
+
+        if (val === 100) {
+            statusDropdown.value = 'completed';
+        } else if (val === 0) {
+            // Only reset to 'todo' if it isn't already 'in_progress' or 'blocked'
+            if (currentStatus !== 'in_progress' && currentStatus !== 'blocked') {
+                statusDropdown.value = 'todo';
+            }
+        } else {
+            statusDropdown.value = 'in_progress';
+        }
+    }
+
+    // Slider moves -> Check if we should update status
+    slider.addEventListener('input', () => syncUI(false));
+    
+    // Manual status change -> Lock that status
+    statusDropdown.addEventListener('change', () => syncUI(true));
+
+    syncUI(); // Run on load
+
+    // Safety sync on submit (treat as manual to prevent last-second reset)
+    taskForm.addEventListener('submit', () => syncUI(true));
+}); {% endcomment %}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const slider = document.querySelector('input[type="range"]');
+    const bubble = document.getElementById('slider-bubble');
+    const statusDropdown = document.querySelector('select[name="status"]');
+
+    function updateVisuals(val) {
+        const value = parseInt(val);
+        bubble.innerHTML = value + "%";
+        bubble.style.left = `calc(${value}% + (${8 - value * 0.15}px))`;
+        let color = value < 30 ? "#ef4444" : (value < 70 ? "#f59e0b" : "#10b981");
+        slider.style.backgroundSize = value + '% 100%';
+        slider.style.backgroundImage = `linear-gradient(${color}, ${color})`;
+        bubble.style.backgroundColor = color;
+    }
+
+    // --- LOGIC BASED ON YOUR PATTERN TABLE ---
+    statusDropdown.addEventListener('change', function() {
+        const status = this.value;
+        const currentVal = parseInt(slider.value);
+
+        if (status === 'todo') {
+            slider.value = 0; // pattern: To Do = 0%
+        } 
+        else if (status === 'in_progress') {
+            // pattern: In Progress = 10% - 90%
+            if (currentVal < 10 || currentVal > 90) slider.value = 10; 
+        } 
+        else if (status === 'in_review') {
+            slider.value = 90; // pattern: In Review = 90%
+        } 
+        else if (status === 'completed') {
+            slider.value = 100; // pattern: Completed = 100%
+        }
+        // status === 'blocked': No change to slider (pattern: freezes percentage)
+
+        updateVisuals(slider.value);
+    });
+
+    slider.addEventListener('input', function() {
+        const val = parseInt(this.value);
+        updateVisuals(val);
+
+        // Boundary Sync (Slider forcing status)
+        if (val === 100) {
+            statusDropdown.value = 'completed';
+        } else if (val === 0) {
+            if (statusDropdown.value !== 'blocked') statusDropdown.value = 'todo';
+        } else if (val === 90) {
+            statusDropdown.value = 'in_review';
+        } else {
+            // Any other manual move (10-85, etc) forces In Progress if it was Done/Todo
+            if (statusDropdown.value === 'todo' || statusDropdown.value === 'completed') {
+                statusDropdown.value = 'in_progress';
+            }
+        }
+    });
+
+    updateVisuals(slider.value);
+});
+
+
+
+document.addEventListener('DOMContentLoaded', function() {
+    const projectSelect = document.getElementById('id_project');
+    const userDropdown = document.getElementById('id_assigned_to');
+
+    if (projectSelect) {
+        projectSelect.addEventListener('change', function() {
+            const projectId = this.value;
+            
+            // Clear current options and show "Loading..."
+            userDropdown.innerHTML = '<option value="">Loading members...</option>';
+
+            if (!projectId) {
+                userDropdown.innerHTML = '<option value="">---------</option>';
+                return;
+            }
+
+            // The URL matches our projects:get_project_members path
+            fetch(`/projects/api/get-members/${projectId}/`)
+                .then(response => {
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    return response.json();
+                })
+                .then(data => {
+                    userDropdown.innerHTML = '<option value="">---------</option>';
+                    data.members.forEach(user => {
+                        const option = new Option(user.username, user.id);
+                        userDropdown.add(option);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching members:', error);
+                    userDropdown.innerHTML = '<option value="">Error loading members</option>';
+                });
+        });
+    }
+});
+
+document.getElementById('id_project').addEventListener('change', function() {
+    const projectId = this.value;
+    const userDropdown = document.getElementById('id_assigned_to');
+    
+    if (!projectId) {
+        // If they clear the project, clear the members list
+        userDropdown.innerHTML = '<option value="">---------</option>';
+        return;
+    }
+
+    userDropdown.innerHTML = '<option value="">Loading...</option>';
+
+    fetch(`/projects/api/get-members/${projectId}/`)
+        .then(response => response.json())
+        .then(data => {
+            userDropdown.innerHTML = '<option value="">---------</option>';
+            data.members.forEach(user => {
+                const option = new Option(user.username, user.id);
+                userDropdown.add(option);
+            });
+        });
+});
+
+
+</script>
+{% endblock %}

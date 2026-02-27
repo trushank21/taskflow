@@ -1,0 +1,67 @@
+{% for project in projects %}
+<div class="col-md-6 col-xl-4 project-item animate__animated animate__fadeIn">
+    <div class="card-custom h-100 d-flex flex-column border-0 position-relative transition-up shadow-sm bg-white p-4 rounded-3">
+        
+        <div class="position-absolute top-0 start-0 w-100" style="height: 4px; border-radius: 12px 12px 0 0; background: 
+            {% if project.status == 'completed' %}#10b981
+            {% elif project.status == 'on_hold' %}#f59e0b
+            {% elif project.status == 'inactive' %}#ef4444
+            {% else %}#6366f1{% endif %};">
+        </div>
+
+        <div class="pt-2">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <span class="badge-pro small 
+                    {% if project.status == 'completed' %}bg-done
+                    {% elif project.status == 'on_hold' %}bg-warning text-dark
+                    {% elif project.status == 'inactive' %}bg-danger text-white
+                    {% else %}bg-progress{% endif %}">
+                    
+                    {% if project.status == 'inactive' %}
+                        <i class="fas fa-lock me-1"></i> {% endif %}
+                    {{ project.get_status_display }}
+                </span>
+
+                {% if request.user.profile.role != 'developer' and request.user.profile.role != 'observer' %}
+                <div class="dropdown">
+                    <button class="btn btn-link text-muted p-0 shadow-none" data-bs-toggle="dropdown">
+                        <i class="fas fa-ellipsis-h"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                        <li><a class="dropdown-item small" href="{% url 'projects:project_update' project.pk %}"><i class="fas fa-edit me-2"></i> Edit</a></li>
+                        <li><a class="dropdown-item small text-danger ajax-delete-project" href="{% url 'projects:project_delete' project.pk %}"><i class="fas fa-trash me-2"></i> Delete</a></li>
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+
+            <h5 class="fw-bold mb-2">
+                <a href="{% url 'projects:project_detail' project.pk %}" class="text-dark text-decoration-none hover-primary">
+                    {{ project.title }}
+                </a>
+            </h5>
+            <p class="text-muted small mb-4">{{ project.description|truncatewords:15|default:"No description." }}</p>
+        </div>
+
+        <div class="mt-auto pt-3 border-top d-flex justify-content-between align-items-center">
+            <div class="avatar-group">
+                {% for member in project.team_members.all|slice:":3" %}
+                <img src="https://ui-avatars.com/api/?name={{ member.username }}&background=6366f1&color=fff" 
+                     class="avatar-sm rounded-circle border border-2 border-white" 
+                     style="width:28px; height:28px; margin-left:-8px;" title="{{ member.username }}">
+                {% endfor %}
+            </div>
+            <span class="small text-muted">
+                <i class="far fa-calendar-alt me-1"></i> {{ project.start_date|date:"M d" }}
+            </span>
+        </div>
+    </div>
+</div>
+{% empty %}
+<div class="col-12 text-center py-5">
+    <div class="bg-light d-inline-block p-4 rounded-circle mb-3">
+        <i class="fas fa-folder-open text-muted fs-1"></i>
+    </div>
+    <p class="text-muted">No projects found matching your criteria.</p>
+</div>
+{% endfor %}

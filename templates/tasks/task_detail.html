@@ -1,0 +1,1783 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ task.title }} | TaskFlow{% endblock %}
+{% block page_header %}Task Details{% endblock %}
+
+{% block content %}
+
+
+<div class="animate__animated animate__fadeIn">
+    
+    {% if is_locked %}
+    <div class="alert alert-warning border-0 shadow-sm d-flex align-items-center mb-4 rounded-3">
+        <i class="fas fa-lock fs-4 me-3"></i>
+        <div>
+            <strong class="d-block">Project Paused</strong>
+            This task is read-only because the parent project <strong>{{ task.project }}</strong> is inactive.
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="card-custom mb-4 border-start border-4 border-primary shadow-sm {% if is_locked %}opacity-75{% endif %}">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+            <div>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb mb-2">
+                        <li class="breadcrumb-item"><a href="{% url 'projects:project_list' %}" class="text-decoration-none text-primary fw-medium">{{ task.project.name }}</a></li>
+                        <li class="breadcrumb-item active">{{task.project}} #Task - {{ task.pk }}</li>
+                    </ol>
+                </nav>
+                <h2 class="fw-bold text-dark mb-2">{{ task.title }}</h2>
+                <div class="d-flex flex-wrap gap-2">
+                    <span id="main-status-badge" class="badge-pro {% if task.status == 'todo' %}bg-todo{% elif task.status == 'in_progress' %}bg-progress{% elif task.status == 'in_review' %}bg-warning{% else %}bg-done{% endif %}">
+                        <i class="fas fa-circle me-1" style="font-size: 7px;"></i> 
+                        <span class="status-label">{{ task.get_status_display }}</span>
+                    </span>
+                    <span class="badge-pro {% if task.priority == 'high' %}bg-high{% else %}bg-progress{% endif %}">
+                        <i class="fas fa-flag me-1"></i> {{ task.get_priority_display }}
+                    </span>
+                </div>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{% url 'tasks:task_list' %}" class="btn btn-light btn-sm fw-bold border text-muted shadow-sm">
+                    <i class="fas fa-arrow-left me-1 text-primary"></i> Back to TaskList
+                </a>
+
+                
+
+                {# 1. Strict Observer Check: If observer, show nothing but the Back button #}
+                {% if request.user.profile.role == 'observer' %}
+                    <span class="badge bg-secondary bg-opacity-10 text-secondary d-flex align-items-center px-3 border fw-bold small">
+                        <i class="fas fa-eye me-2 text-danger"></i> Read-Only View
+                    </span>
+
+                {# 2. Lifecycle Check: If project is inactive, everything is locked for non-admins #}
+                {% elif is_locked %}
+                    <button class="btn btn-light btn-sm fw-bold border text-muted opacity-50" disabled>
+                        <i class="fas fa-lock me-1"></i> Locked
+                    </button>
+
+                {# 3. Standard Permission Logic #}
+                {% else %}
+                    {# EDIT BUTTON LOGIC #}
+                    {% if request.user.profile.role in 'admin,manager' or task.project.team_lead == request.user or task.assigned_to == request.user %}
+                        <a href="{% url 'tasks:task_update' task.pk %}" class="btn btn-light btn-sm fw-bold border text-muted shadow-sm">
+                            <i class="fas fa-edit me-1 text-warning"></i> 
+                            {% if request.user.profile.role == 'developer' and task.project.team_lead != request.user %}
+                                Update Progress
+                            {% else %}
+                                Edit Task
+                            {% endif %}
+                        </a>
+                    {% endif %}
+                    
+                    {# DELETE BUTTON LOGIC #}
+                    {% if request.user.profile.role in 'admin,manager' %}
+                        <a href="{% url 'tasks:task_delete' task.pk %}" class="btn btn-outline-danger btn-sm fw-bold shadow-sm">
+                            <i class="fas fa-trash-alt me-1"></i> Delete Task
+                        </a>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card-custom mb-4 shadow-sm">
+                <h6 class="fw-bold text-uppercase small text-muted mb-3 border-bottom pb-2">Description</h6>
+                <div class="text-dark leading-relaxed">
+                    {{ task.description|linebreaks|default:"No description provided." }}
+                </div>
+            </div>
+
+            <div class="card-custom mb-4 bg-light border-0 shadow-sm overflow-hidden">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold mb-0 text-uppercase small text-muted">Progress Tracking</h6>
+                    <div class="d-flex align-items-center gap-2">
+                        <span id="progress-val-bubble" class="badge rounded-pill shadow-sm px-3" style="font-size: 14px;">
+                            {{ task.progress }}%
+                        </span>
+                        {% if task.status == 'completed'  %}
+                            {% if user == task.assigned_to or user == task.project.team_lead or user.profile.role in 'admin,manager' %}
+                            <button id="btn-toggle-status-ajax" data-id="{{ task.pk }}" class="btn {% if task.status != 'completed' %}btn-success{% else %}btn-outline-primary bg-white{% endif %} btn-sm fw-bold py-1 px-2 shadow-sm" style="font-size: 11px;">
+                                <i class="fas {% if task.status != 'completed' %}fa-check-double{% else %}fa-redo{% endif %} me-1"></i> 
+                                <span id="status-btn-text">{% if task.status != 'completed' %}Mark Done{% else %}Re-open{% endif %}</span>
+                            </button>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="position-relative mb-4" style="padding: 0 10px;">
+                    <div class="progress shadow-inner" style="height: 18px; border-radius: 20px; background-color: #e9ecef; border: 1px solid #dee2e6;">
+                        <div id="visual-progress-bar" 
+                             class="progress-bar progress-bar-striped progress-bar-animated" 
+                             style="width: {{ task.progress }}%; border-radius: 20px; transition: width 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+                        </div>
+                    </div>
+                </div>
+                
+                {% if not is_locked and task.assigned_to == request.user %}
+                <div class="row g-2 align-items-center">
+                    <div class="col-8 col-md-10">
+                        <input type="range" id="ajax-progress-slider" min="0" max="100" step="5" value="{{ task.progress }}" 
+                               class="form-range beautiful-range" oninput="updateBeautifulUI(this.value)">
+                        <div class="d-flex justify-content-between mt-1 px-1 text-muted" style="font-size: 10px; font-weight: 800;">
+                            <span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span>
+                        </div>
+                    </div>
+                    <div class="col-4 col-md-2 text-end">
+                        <button id="btn-save-progress-ajax" data-id="{{ task.pk }}" class="btn btn-primary-custom w-100 btn-sm fw-bold shadow-sm rounded-3 py-2">Set</button>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="card-custom shadow-sm">
+                <h6 class="fw-bold mb-4"><i class="far fa-comments me-2 text-primary"></i>Discussion (<span id="comment-count">{{ comments.count }}</span>)</h6>
+                {% if not is_locked and request.user.profile.role != 'observer' %}
+                <form id="ajax-comment-form" data-id="{{ task.pk }}" class="mb-4">
+                    {% csrf_token %}
+                    <div class="form-group mb-2">{{ comment_form.comment }}</div>
+                    <button type="submit" class="btn btn-primary-custom btn-sm fw-bold">Post Comment</button>
+                </form>
+                {% elif request.user.profile.role == 'observer' %}
+                    <div class="alert alert-light border-dashed small text-muted mb-4 text-center">
+                        <i class="fas fa-info-circle me-1"></i> Discussion is read-only for Observers.
+                    </div>
+                {% endif %}
+
+            <div id="comment-scroll-section" style="max-height: 500px; overflow-y: auto; padding-right: 10px;">
+                <div id="comment-feed">
+                    {% for comment in comments %}
+                        {% if not comment.parent %} 
+                        <div id="comment-container-{{ comment.pk }}" class="mb-4 parent-comment-block">
+                            <div class="d-flex gap-3 animate__animated animate__fadeIn">
+                                <img src="https://ui-avatars.com/api/?name={{ comment.commented_by.username }}&background=6366f1&color=fff" class="rounded-circle shadow-sm" width="40" height="40">
+                                <div class="bg-light p-3 rounded-3 flex-grow-1 border shadow-sm position-relative">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span class="fw-bold small text-dark">{{ comment.commented_by.username }}</span>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="text-muted small" style="font-size: 11px;">{{ comment.created_at|timesince }} ago</span>
+                                            {% if request.user.profile.role != 'observer' %}
+                                            <button class="btn btn-link btn-sm p-0 text-muted reply-btn" data-id="{{ comment.pk }}"><i class="fas fa-reply fa-xs"></i> Reply</button>
+                                                {% if comment.commented_by == request.user %}
+                                                    <button class="btn btn-link btn-sm p-0 text-primary edit-comment-btn" data-id="{{ comment.pk }}"><i class="fas fa-edit fa-xs"></i></button>
+                                                    <button class="btn btn-link btn-sm p-0 text-danger delete-comment-btn" data-id="{{ comment.pk }}"><i class="fas fa-trash fa-xs"></i></button>
+                                                {% endif %}
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <p id="comment-text-{{ comment.pk }}" class="mb-0 small text-dark comment-body-text">{{ comment.comment }}</p>
+                                    
+                                    <div id="edit-form-{{ comment.pk }}" class="d-none mt-2">
+                                        <textarea id="edit-textarea-{{ comment.pk }}" class="form-control form-control-sm mb-2 edit-textarea" rows="2">{{ comment.comment }}</textarea>
+                                        <div class="d-flex gap-2 justify-content-end">
+                                            <button class="btn btn-xs btn-light cancel-edit-btn" data-id="{{ comment.pk }}">Cancel</button>
+                                            <button class="btn btn-xs btn-primary-custom save-edit-btn" data-id="{{ comment.pk }}">Save</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="replies-to-{{ comment.pk }}" class="ms-5 mt-3 border-start ps-3">
+                                {% for reply in comment.replies.all %}
+                                    <div id="comment-container-{{ reply.pk }}" class="d-flex gap-3 mb-3 animate__animated animate__fadeIn">
+                                        <img src="https://ui-avatars.com/api/?name={{ reply.commented_by.username }}&background=10b981&color=fff" class="rounded-circle" width="30" height="30">
+                                        <div class="bg-white p-2 rounded-3 flex-grow-1 border shadow-sm">
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <span class="fw-bold text-dark" style="font-size: 11px;">{{ reply.commented_by.username }}</span>
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <span class="text-muted" style="font-size: 10px;">{{ reply.created_at|timesince }} ago</span>
+                                                    {% if reply.commented_by == request.user %}
+                                                        <button class="btn btn-link btn-sm p-0 text-primary edit-comment-btn" data-id="{{ reply.pk }}"><i class="fas fa-edit fa-xs" style="font-size: 9px;"></i></button>
+                                                        <button class="btn btn-link btn-sm p-0 text-danger delete-comment-btn" data-id="{{ reply.pk }}"><i class="fas fa-trash fa-xs" style="font-size: 9px;"></i></button>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            <p id="comment-text-{{ reply.pk }}" class="mb-0 small text-dark comment-body-text">{{ reply.comment }}</p>
+
+                                            <div id="edit-form-{{ reply.pk }}" class="d-none mt-2">
+                                                <textarea id="edit-textarea-{{ reply.pk }}" class="form-control form-control-sm mb-2 edit-textarea" rows="2">{{ reply.comment }}</textarea>
+                                                <div class="d-flex gap-2 justify-content-end">
+                                                    <button class="btn btn-xs btn-light cancel-edit-btn" data-id="{{ reply.pk }}">Cancel</button>
+                                                    <button class="btn btn-xs btn-primary-custom save-edit-btn" data-id="{{ reply.pk }}">Save</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            
+                            <div id="reply-form-container-{{ comment.pk }}" class="d-none ms-5 mt-2">
+                                <form class="ajax-reply-form" data-parent="{{ comment.pk }}">
+                                    <textarea class="form-control form-control-sm mb-2" rows="2" placeholder="Write a reply..."></textarea>
+                                    <div class="d-flex gap-2 justify-content-end">
+                                        <button type="button" class="btn btn-xs btn-light cancel-reply-btn" data-id="{{ comment.pk }}">Cancel</button>
+                                        <button type="submit" class="btn btn-xs btn-primary-custom">Post Reply</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+
+            <div class="card-custom mb-4 shadow-sm border-top border-4 border-primary p-3">
+                <h6 class="fw-bold mb-3 border-bottom pb-2 text-uppercase small text-muted">Stakeholders</h6>
+                
+                <div class="row mb-4">
+                    <div class="col-6 border-end">
+                        <label class="tiny-label text-muted d-block mb-1">Assignee</label>
+                        <div class="d-flex align-items-center">
+                            <img src="https://ui-avatars.com/api/?name={{ task.assigned_to.username }}&background=6366f1&color=fff" class="rounded-circle me-2" width="24" height="24">
+                            <span class="fw-bold text-dark small">{{ task.assigned_to.username }}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="col-6 ps-3">
+                        <label class="tiny-label text-muted d-block mb-1">Team Leader</label>
+                        <div class="d-flex align-items-center">
+                            <img src="https://ui-avatars.com/api/?name={{ task.project.team_lead.username }}&background=0d6efd&color=fff" class="rounded-circle me-2" width="24" height="24">
+                            <span class="fw-bold text-dark small">{{ task.project.team_lead.username }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-3 border-top pt-3">
+                    <div class="col-6">
+                        <label class="small text-muted d-block">Due Date</label>
+                        <span class="fw-bold small text-dark">{{ task.due_date|date:"M d, Y"|default:"Not set" }}</span>
+                    </div>
+                    <div class="col-6">
+                        <label class="small text-muted d-block">Time Est.</label>
+                        <span class="fw-bold small text-dark">{{ task.estimated_hours|default:"0" }}h</span>
+                    </div>
+                </div>
+            </div>
+
+            
+            <div class="card-custom mb-4 shadow-sm border-top border-4 border-info">
+                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                    <h6 class="fw-bold mb-0 text-uppercase small text-muted">Attachments</h6>
+                    
+                    {# BLOCK: Upload Button for Observers #}
+                    {% if not is_locked and request.user.profile.role != 'observer' %}
+                    <button class="btn btn-primary-custom btn-sm rounded-circle p-0 d-flex align-items-center justify-content-center shadow-sm" style="width: 24px; height: 24px;" data-bs-toggle="modal" data-bs-target="#uploadModal">
+                        <i class="fas fa-plus" style="font-size: 10px;"></i>
+                    </button>
+                    {% endif %}
+                </div>
+                <div id="attachment-list">
+                    {% for attachment in attachments %}
+                    <div id="attachment-row-{{ attachment.pk }}" class="p-2 border rounded-3 mb-2 d-flex align-items-center bg-light-hover transition-all position-relative attachment-row">
+                        <div class="file-icon me-3">
+                            {% with extension=attachment.file.url|lower %}
+                                {% if '.jpg' in extension or '.jpeg' in extension or '.png' in extension or '.gif' in extension %}
+                                    <i class="fas fa-file-image text-success fs-4"></i>
+                                {% elif '.pdf' in extension %}
+                                    <i class="fas fa-file-pdf text-danger fs-4"></i>
+                                {% else %}
+                                    <i class="fas fa-file-alt text-primary fs-4"></i>
+                                {% endif %}
+                            {% endwith %}
+                        </div>
+                        <div class="flex-grow-1 overflow-hidden">
+                            <span class="small fw-bold text-dark d-block text-truncate">{{ attachment.file_name }}</span>
+                            <small class="text-muted" style="font-size: 10px;">By {{ attachment.uploaded_by.username }}</small>
+                        </div>
+                        <div class="d-flex gap-2 ms-2" style="position: relative; z-index: 2;">
+                            <button class="btn p-1 text-muted border-0 bg-transparent view-file-btn" data-url="{{ attachment.file.url }}" data-name="{{ attachment.file_name }}">
+                                <i class="fas fa-eye small"></i>
+                            </button>
+                            <a href="{{ attachment.file.url }}" download class="text-muted p-1"><i class="fas fa-download small"></i></a>
+                            {% if not is_locked and request.user.profile.role != 'observer' %}
+                                {% if request.user == attachment.uploaded_by or request.user.profile.role in 'admin,manager' or task.project.team_lead == request.user %}
+                            <button type="button" class="btn p-1 text-danger border-0 bg-transparent delete-attachment-btn" data-id="{{ attachment.pk }}">
+                                <i class="fas fa-trash-alt small"></i>
+                            </button>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div id="no-attachments-msg" class="text-center py-3 opacity-50 small italic border border-dashed rounded">No files.</div>
+                    {% endfor %}
+                </div>
+            </div>
+            
+
+            <div class="card-custom bg-dark text-white border-0 shadow-sm">
+                <h6 class="fw-bold mb-3 text-white-50 small text-uppercase" style="letter-spacing: 1px;">History Log</h6>
+                <div class="d-flex gap-3 mb-3">
+                    <i class="fas fa-plus-circle text-success mt-1"></i>
+                    <div>
+                        <small class="d-block text-white-50">Created on</small>
+                        <small class="fw-medium">{{ task.created_at|date:"M d, Y H:i" }}</small>
+                    </div>
+                </div>
+                <div class="d-flex gap-3">
+                    <i class="fas fa-sync-alt text-info mt-1"></i>
+                    <div>
+                        <small class="d-block text-white-50">Last activity</small>
+                        <small class="fw-medium">{{ task.updated_at|date:"M d, Y H:i" }}</small>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <div class="card-custom shadow-sm border-top border-4 border-secondary mt-4">
+    <h6 class="fw-bold mb-3 text-uppercase small text-muted border-bottom pb-2 d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-history me-2 text-secondary"></i>Status Timeline</span>
+        {# Only show clear button to authorized roles #}
+        {% if request.user.profile.role in 'admin,manager' %}
+        <button id="btn-clear-history" data-url="{% url 'tasks:clear_history' task.pk %}" class="btn btn-link text-danger p-0 text-decoration-none extra-small fw-bold">
+            <i class="fas fa-eraser me-1"></i> Clear
+        </button>
+        {% endif %}
+    </h6>
+
+    <div id="timeline-scroll-container" style="max-height: 400px; overflow-y: auto; overflow-x: hidden; padding-right: 5px;">
+        <div id="timeline-log-list" class="timeline-wrapper">
+            {% for log in task.get_status_history %}
+                <div class="timeline-item animate__animated animate__fadeInLeft">
+                    <div class="timeline-marker bg-primary"></div>
+                    <div class="timeline-content">
+                        <div class="d-flex justify-content-between align-items-start mb-1">
+                            <span class="fw-bold small text-dark">{{ log.changed_by.username }}</span>
+                            <span class="text-muted extra-small" style="font-size: 9px;">{{ log.changed_at|timesince }} ago</span>
+                        </div>
+                        <div class="status-change-info">
+                            <span class="text-muted small">Moved from </span>
+                            <span class="badge bg-light text-muted border py-1">{{ log.old_status }}</span> 
+                            <span class="text-muted small"> to </span>
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle py-1">{{ log.new_status }}</span>
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="text-center py-4 opacity-50 empty-timeline-msg">
+                    <i class="fas fa-shoe-prints d-block mb-2 fs-3"></i>
+                    <p class="small italic mb-0">Initial status: <strong>{{ task.get_status_display }}</strong></p>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+            
+
+
+
+
+
+    </div>
+</div>
+
+<div class="modal fade" id="previewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="height: 85vh; border-radius: 20px;">
+            <div class="modal-header bg-dark text-white border-0">
+                <h5 class="modal-title fw-bold" id="previewFilename">File Preview</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0 bg-secondary position-relative overflow-hidden">
+                <iframe id="previewFrame" src="" width="100%" height="100%" frameborder="0"></iframe>
+                <div id="previewImageContainer" class="text-center d-none h-100 d-flex align-items-center justify-content-center bg-dark">
+                    <img id="previewImage" src="" class="img-fluid shadow-lg" style="max-height: 100%;">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="uploadModal" tabindex="-1" aria-hidden="true" style="z-index:1000001;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="fw-bold text-dark mt-2 ms-2">Upload File</h5>
+                <button type="button" class="btn-close me-2 mt-1" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="ajax-upload-form" action="{% url 'tasks:add_attachment' task.pk %}" method="POST" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">File Display Name</label>
+                        {{ attachment_form.file_name }}
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small fw-bold text-muted">Select Document/Image</label>
+                        <div class="p-4 border border-dashed rounded-4 text-center bg-light">
+                            <i class="fas fa-cloud-upload-alt text-primary fs-1 mb-2"></i>
+                            <p id="file-upload-text" class="small text-muted mb-0">Click to choose or drag & drop</p>
+                            {{ attachment_form.file }}
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0 pb-4 px-4">
+                    <button type="button" class="btn btn-light fw-bold text-muted rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" id="btn-upload-submit" class="btn btn-primary-custom fw-bold rounded-pill px-4">Start Upload</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script>
+    let toastInstance;
+    const csrfToken = '{{ csrf_token }}';
+
+    function showNotification(message, isError = false) {
+    // 1. Target the container you already have in base.html
+    const container = document.querySelector('.toast-container');
+    if (!container) return; // Safety check
+
+    // 2. Create a unique ID for this specific alert
+    const toastId = 'toast-' + Date.now();
+    const bgColor = isError ? 'bg-danger' : 'bg-success';
+    const icon = isError ? 'fa-exclamation-triangle' : 'fa-check-circle';
+
+    // 3. Build the HTML string
+    const toastHtml = `
+        <div id="${toastId}" class="toast align-items-center text-white ${bgColor} border-0 shadow-lg mb-2" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="fas ${icon} me-2"></i> ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>`;
+
+    // 4. Inject it and trigger Bootstrap to show it
+    $(container).append(toastHtml);
+    const element = document.getElementById(toastId);
+    const toast = new bootstrap.Toast(element, { delay: 3000 });
+    toast.show();
+
+    // 5. Clean up the DOM after the toast disappears
+    element.addEventListener('hidden.bs.toast', () => {
+        element.remove();
+    });
+}
+
+
+
+
+function prependTimelineItem(res) {
+        if (!res.log_user) return; // Only run if log data exists in the response
+
+        const logHtml = `
+            <div class="timeline-item animate__animated animate__fadeInLeft">
+                <div class="timeline-marker bg-primary shadow-pulse"></div>
+                <div class="timeline-content border-primary-subtle shadow-sm">
+                    <div class="d-flex justify-content-between align-items-start mb-1">
+                        <span class="fw-bold small text-dark">${res.log_user}</span>
+                        <span class="text-muted extra-small" style="font-size: 9px;">${res.log_time}</span>
+                    </div>
+                    <div class="status-change-info">
+                        <span class="text-muted small">Moved from </span>
+                        <span class="badge bg-light text-muted border py-1">${res.log_old}</span> 
+                        <span class="text-muted small"> to </span>
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle py-1 fw-bold">${res.log_new}</span>
+                    </div>
+                </div>
+            </div>`;
+        
+        const $list = $('#timeline-log-list');
+        $list.find('.text-center.py-4').remove(); // Remove empty state message
+        $list.prepend(logHtml);
+    }
+
+
+    // --- CLEAR HISTORY AJAX ---
+    $(document).on('click', '#btn-clear-history', function() {
+        if (!confirm("Are you sure? This will permanently delete all status logs for this task.")) return;
+        
+        const url = $(this).data('url');
+        const $btn = $(this);
+        
+        $.ajax({
+            url: url,
+            type: 'POST',
+            data: {'csrfmiddlewaretoken': csrfToken},
+            headers: {'X-Requested-With': 'XMLHttpRequest'},
+            success: function(res) {
+                // Smoothly clear the timeline visuals
+                $('#timeline-log-list').fadeOut(400, function() {
+                    $(this).html(`
+                        <div class="text-center py-4 opacity-50 empty-timeline-msg">
+                            <i class="fas fa-shoe-prints d-block mb-2 fs-3"></i>
+                            <p class="small italic mb-0">Timeline was cleared by Admin.</p>
+                        </div>
+                    `).fadeIn();
+                });
+                $btn.remove(); // Hide the clear button since there is no more history
+                showNotification('Status timeline cleared');
+            },
+            error: function() {
+                showNotification('Failed to clear history', true);
+            }
+        });
+    });
+
+
+    /**
+     * CENTRAL UI SYNC FUNCTION
+     * Keeps bubble, bar, and slider consistent.
+     */
+    {% comment %} function updateBeautifulUI(val) {
+        const value = parseInt(val);
+        const badge = $('#progress-val-bubble');
+        const progressBar = $('#visual-progress-bar');
+        const slider = $('#ajax-progress-slider');
+
+        badge.text(value + '%');
+        progressBar.css('width', value + '%');
+        if (slider.val() != value) slider.val(value);
+
+        badge.removeClass('bg-danger bg-warning bg-success text-dark');
+        progressBar.removeClass('bg-danger bg-warning bg-success');
+
+        if (value < 30) { badge.addClass('bg-danger'); progressBar.addClass('bg-danger'); } 
+        else if (value < 70) { badge.addClass('bg-warning text-dark'); progressBar.addClass('bg-warning'); } 
+        else { badge.addClass('bg-success'); progressBar.addClass('bg-success'); }
+    } {% endcomment %}
+
+        function updateBeautifulUI(val) {
+        const value = parseInt(val);
+        const badge = $('#progress-val-bubble');
+        const progressBar = $('#visual-progress-bar');
+        const slider = $('#ajax-progress-slider');
+
+        badge.text(value + '%');
+        progressBar.css('width', value + '%');
+        if (slider.val() != value) slider.val(value);
+
+        badge.removeClass('bg-danger bg-warning bg-success bg-info text-dark');
+        progressBar.removeClass('bg-danger bg-warning bg-success bg-info');
+
+        if (value === 0) { 
+            badge.addClass('bg-secondary'); progressBar.addClass('bg-secondary'); 
+        } else if (value < 30) { 
+            badge.addClass('bg-danger'); progressBar.addClass('bg-danger'); 
+        } else if (value === 90) { 
+            badge.addClass('bg-info'); progressBar.addClass('bg-info'); // "In Review" color
+        } else if (value < 90) { 
+            badge.addClass('bg-warning text-dark'); progressBar.addClass('bg-warning'); 
+        } else { 
+            badge.addClass('bg-success'); progressBar.addClass('bg-success'); 
+        }
+    }
+
+
+    $(document).ready(function() {
+        updateBeautifulUI({{ task.progress }});
+
+        // Moves modal to the top layer when it opens
+$(document).on('show.bs.modal', '.modal', function () {
+    $(this).appendTo('body');
+    // Prevents other overlays from blocking clicks
+    $('#loader-wrapper, #sidebar-overlay, .sidebar').css('pointer-events', 'none');
+});
+
+// Restores standard behavior when modal closes
+$(document).on('hidden.bs.modal', '.modal', function () {
+    $('#loader-wrapper, #sidebar-overlay, .sidebar').css('pointer-events', 'auto');
+    $('.modal-backdrop').remove(); // Cleans up the gray screen
+    $('body').css('overflow', 'auto');
+});
+
+        // --- ATTACHMENT FILENAME DISPLAY ---
+        $('#uploadModal input[type="file"]').on('change', function() {
+            const fileName = $(this).val().split('\\').pop();
+            if (fileName) { $('#file-upload-text').html(`<strong class="text-primary">${fileName}</strong> selected`); }
+            else { $('#file-upload-text').text('Click to choose or drag & drop'); }
+        });
+
+        // --- ATTACHMENT UPLOAD AJAX ---
+        $('#ajax-upload-form').on('submit', function(e) {
+            e.preventDefault();
+            const $form = $(this), $btn = $('#btn-upload-submit'), formData = new FormData(this);
+            $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Uploading...');
+
+            $.ajax({
+                url: $form.attr('action'),
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: {'X-Requested-With': 'XMLHttpRequest'},
+                success: function(res) {
+                    const iconClass = (res.extension.includes('pdf')) ? 'fa-file-pdf text-danger' : 
+                                      (['jpg','jpeg','png','gif'].some(ext => res.extension.includes(ext))) ? 'fa-file-image text-success' : 'fa-file-alt text-primary';
+                    
+                    const newHtml = `
+                        <div id="attachment-row-${res.id}" class="p-2 border rounded-3 mb-2 d-flex align-items-center bg-light-hover transition-all position-relative attachment-row animate__animated animate__fadeInDown">
+                            <div class="file-icon me-3"><i class="fas ${iconClass} fs-4"></i></div>
+                            <div class="flex-grow-1 overflow-hidden">
+                                <span class="small fw-bold text-dark d-block text-truncate">${res.file_name}</span>
+                                <small class="text-muted" style="font-size: 10px;">By ${res.user}</small>
+                            </div>
+                            <div class="d-flex gap-2 ms-2" style="position: relative; z-index: 2;">
+                                <button class="btn p-1 text-muted border-0 bg-transparent view-file-btn" data-url="${res.url}" data-name="${res.file_name}"><i class="fas fa-eye small"></i></button>
+                                <a href="${res.url}" download class="text-muted p-1"><i class="fas fa-download small"></i></a>
+                                <button type="button" class="btn p-1 text-danger border-0 bg-transparent delete-attachment-btn" data-id="${res.id}"><i class="fas fa-trash-alt small"></i></button>
+                            </div>
+                        </div>`;
+                    
+                    $('#no-attachments-msg').remove();
+                    $('#attachment-list').prepend(newHtml);
+                    bootstrap.Modal.getInstance(document.getElementById('uploadModal')).hide();
+                    $form[0].reset();
+                    $('#file-upload-text').text('Click to choose or drag & drop');
+                    showNotification('File uploaded successfully');
+                    
+                    //const modalEl = document.getElementById('uploadModal');
+                    const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                    //if (modalInstance) {
+                      //  modalInstance.hide();
+                    //}
+                   
+                    
+                    $btn.prop('disabled', false).text('Start Upload');
+                },
+                error: function(xhr) {
+                    $btn.prop('disabled', false).text('Start Upload');
+                    showNotification('Upload failed. Check file size/type.', true);
+                }
+            });
+        });
+
+
+        // --- ATTACHMENT DELETE AJAX ---
+        $(document).on('click', '.delete-attachment-btn', function() {
+            if (!confirm("Remove this file?")) return;
+            const attachmentId = $(this).data('id');
+            const $row = $(`#attachment-row-${attachmentId}`);
+            $.ajax({
+                url: `/attachment/${attachmentId}/delete/`, 
+                type: 'POST',
+                data: {'csrfmiddlewaretoken': csrfToken},
+                headers: {'X-Requested-With': 'XMLHttpRequest'},
+                success: function(res) {
+                    $row.addClass('animate__animated animate__fadeOutRight');
+                    setTimeout(function() {
+                        $row.remove();
+                        if ($('#attachment-list').children('.attachment-row').length === 0) {
+                            $('#attachment-list').html('<div id="no-attachments-msg" class="text-center py-3 opacity-50 small italic border border-dashed rounded">No files.</div>');
+                        }
+                    }, 450);
+                    showNotification(res.message || 'File removed successfully');
+                }
+            });
+        });
+
+        // --- POST COMMENT AJAX ---
+        $('#ajax-comment-form').on('submit', function(e) {
+            e.preventDefault();
+            const taskId = $(this).data('id'), $form = $(this);
+            $.ajax({
+                url: `/tasks/${taskId}/comment/`,
+                type: 'POST',
+                data: $form.serialize(),
+                headers: {'X-Requested-With': 'XMLHttpRequest'},
+                success: function(res) {
+                    const newCommentHtml = `
+                        <div id="comment-container-${res.id}" class="d-flex gap-3 mb-4 animate__animated animate__fadeInDown">
+                            <img src="https://ui-avatars.com/api/?name=${res.user}&background=6366f1&color=fff" class="rounded-circle shadow-sm" width="40" height="40">
+                            <div class="bg-light p-3 rounded-3 flex-grow-1 border shadow-sm position-relative">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="fw-bold small text-dark">${res.user}</span>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="text-muted small" style="font-size: 11px;">just now</span>
+                                        <button class="btn btn-link btn-sm p-0 text-primary edit-comment-btn" data-id="${res.id}"><i class="fas fa-edit fa-xs"></i></button>
+                                        <button class="btn btn-link btn-sm p-0 text-danger delete-comment-btn" data-id="${res.id}"><i class="fas fa-trash fa-xs"></i></button>
+                                    </div>
+                                </div>
+                                <p id="comment-text-${res.id}" class="mb-0 small text-dark comment-body-text">${res.comment}</p>
+                                <div id="edit-form-${res.id}" class="d-none mt-2">
+                                    <textarea id="edit-textarea-${res.id}" class="form-control form-control-sm mb-2 edit-textarea" rows="2">${res.comment}</textarea>
+                                    <div class="d-flex gap-2 justify-content-end">
+                                        <button class="btn btn-xs btn-light cancel-edit-btn" data-id="${res.id}">Cancel</button>
+                                        <button class="btn btn-xs btn-primary-custom save-edit-btn" data-id="${res.id}">Save</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>`;
+                    $('#comment-feed').prepend(newCommentHtml);
+                    $form.find('textarea').val('');
+                    $('#comment-count').text(parseInt($('#comment-count').text()) + 1);
+                    showNotification('Comment posted');
+                }
+            });
+        });
+
+        // --- COMMENT EDIT/DELETE ACTIONS (FIXED) ---
+        $(document).on('click', '.edit-comment-btn', function() {
+            const id = $(this).data('id');
+            $(`#comment-text-${id}`).addClass('d-none');
+            $(`#edit-form-${id}`).removeClass('d-none');
+            $(`#edit-textarea-${id}`).focus();
+        });
+
+        $(document).on('click', '.cancel-edit-btn', function() {
+            const id = $(this).data('id');
+            $(`#edit-form-${id}`).addClass('d-none');
+            $(`#comment-text-${id}`).removeClass('d-none');
+        });
+
+       // $(document).on('click', '.save-edit-btn', function() {
+         //   const id = $(this).data('id'), $btn = $(this), newText = $(`#edit-textarea-${id}`).val();
+           // if (!newText.trim()) { showNotification('Comment cannot be empty', true); return; }
+         //   $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+          //  $.ajax({
+            //    url: `/comment/${id}/edit/`,
+             //   type: 'POST',
+             //   data: {'comment': newText, 'csrfmiddlewaretoken': csrfToken},
+             //   headers: {'X-Requested-With': 'XMLHttpRequest'},
+             //   success: function(res) {
+              //      $(`#comment-text-${id}`).text(res.comment).removeClass('d-none');
+               //     $(`#edit-form-${id}`).addClass('d-none');
+               //     $btn.prop('disabled', false).text('Save');
+                //    showNotification('Comment updated');
+               // }
+            //});
+        //});
+
+        $(document).on('click', '.delete-comment-btn', function() {
+            if (!confirm("Delete this comment?")) return;
+            const id = $(this).data('id');
+            $.ajax({
+                url: `/comment/${id}/delete/`,
+                type: 'POST',
+                data: {'csrfmiddlewaretoken': csrfToken},
+                headers: {'X-Requested-With': 'XMLHttpRequest'},
+                success: function() {
+                    $(`#comment-container-${id}`).fadeOut(500, function() { $(this).remove(); });
+                    $('#comment-count').text(parseInt($('#comment-count').text()) - 1);
+                    showNotification('Comment deleted');
+                }
+            });
+        });
+
+        // File Previews
+        $(document).on('click', '.view-file-btn', function() {
+            const fileUrl = $(this).data('url'), fileName = $(this).data('name'), extension = fileUrl.split('.').pop().toLowerCase();
+            $('#previewFilename').text(fileName);
+            const $iframe = $('#previewFrame'), $imgContainer = $('#previewImageContainer'), $img = $('#previewImage');
+            if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension)) {
+                $iframe.addClass('d-none').attr('src', '');
+                $img.attr('src', fileUrl); $imgContainer.removeClass('d-none');
+            } else {
+                $imgContainer.addClass('d-none'); $img.attr('src', '');
+                $iframe.removeClass('d-none').attr('src', fileUrl);
+            }
+            new bootstrap.Modal(document.getElementById('previewModal')).show();
+        });
+
+        // --- PROGRESS & STATUS AJAX (INTELLIGENT SYNC) ---
+        $('#btn-save-progress-ajax').on('click', function() {
+            const taskId = $(this).data('id'), val = $('#ajax-progress-slider').val(), $btn = $(this);
+            $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+            $.ajax({
+                url: `/tasks/${taskId}/progress/`,
+                type: 'POST',
+                data: {'progress': val, 'csrfmiddlewaretoken': csrfToken},
+                headers: {'X-Requested-With': 'XMLHttpRequest'},
+                success: function(res) {
+                    $btn.prop('disabled', false).text('Set');
+                    updateBeautifulUI(res.progress);
+
+                    // ADD THIS LINE TO UPDATE TIMELINE REAL-TIME
+                    prependTimelineItem(res);
+
+                    $('.status-label').text(res.new_status);
+                    const mainBadge = $('#main-status-badge');
+                    mainBadge.removeClass('bg-todo bg-progress bg-warning bg-done');
+                    if (res.progress == 100) mainBadge.addClass('bg-done'); 
+                    else if (res.progress == 0) mainBadge.addClass('bg-todo'); 
+                    else if (res.progress == 90) mainBadge.addClass('bg-warning');
+                    else mainBadge.addClass('bg-progress');
+                    
+                    const $toggleBtn = $('#btn-toggle-status-ajax');
+                    const $btnText = $('#status-btn-text');
+                    if (res.progress == 100) {
+                        $toggleBtn.removeClass('btn-success').addClass('btn-outline-primary bg-white');
+                        $toggleBtn.find('i').attr('class', 'fas fa-redo me-1');
+                        $btnText.text('Re-open');
+                    } else {
+                        $toggleBtn.removeClass('btn-outline-primary bg-white').addClass('btn-success');
+                        $toggleBtn.find('i').attr('class', 'fas fa-check-double me-1');
+                        $btnText.text('Mark Done');
+                    }
+                    showNotification(`Progress updated to ${res.progress}%`);
+                }
+            });
+        });
+
+        $('#btn-toggle-status-ajax').on('click', function() {
+            const taskId = $(this).data('id'), $btn = $(this), $btnText = $('#status-btn-text');
+            const nextStatus = ($btnText.text().trim() === 'Mark Done') ? 'completed' : 'in_progress';
+            $.ajax({
+                url: `/tasks/${taskId}/status/`,
+                type: 'POST',
+                data: {'status': nextStatus, 'csrfmiddlewaretoken': csrfToken},
+                headers: {'X-Requested-With': 'XMLHttpRequest'},
+                success: function(res) {
+                    updateBeautifulUI(res.progress);
+
+                    // ADD THIS LINE TO UPDATE TIMELINE REAL-TIME
+                    prependTimelineItem(res);
+
+                    $('.status-label').text(res.new_status);
+                    
+                    const mainBadge = $('#main-status-badge');
+
+                    mainBadge.removeClass('bg-todo bg-progress bg-warning bg-done bg-info bg-secondary');
+                    if (res.progress == 100) mainBadge.addClass('bg-done');
+                    else if (res.progress == 0) mainBadge.addClass('bg-secondary');
+                    else if (res.progress == 90) mainBadge.addClass('bg-info');
+                    else mainBadge.addClass('bg-progress');
+                    
+                    if (res.progress === 100) {
+                        confetti({
+                            particleCount: 150,
+                            spread: 70,
+                            origin: { y: 0.6 },
+                            colors: ['#6366f1', '#10b981', '#f59e0b']
+                        });
+                        $btn.removeClass('btn-success').addClass('btn-outline-primary bg-white');
+                        $btn.find('i').removeClass('fa-check-double').addClass('fa-redo');
+                        $btnText.text('Re-open');
+                    } else {
+                        $btn.removeClass('btn-outline-primary bg-white').addClass('btn-success');
+                        $btn.find('i').removeClass('fa-redo').addClass('fa-check-double');
+                        $btnText.text('Mark Done');
+                    }
+                    showNotification(`Status updated to ${res.new_status}`);
+                }
+            });
+        });
+    });
+
+
+
+    $(document).ready(function() {
+    // --- 1. POST REPLY AJAX ---
+    $(document).on('submit', '.ajax-reply-form', function(e) {
+        e.preventDefault();
+        const $form = $(this), parentId = $form.data('parent'), commentText = $form.find('textarea').val(), taskId = '{{ task.pk }}';
+        if (!commentText.trim()) return;
+
+        $.ajax({
+            url: `/tasks/${taskId}/comment/`,
+            type: 'POST',
+            data: { 'comment': commentText, 'parent_id': parentId, 'csrfmiddlewaretoken': csrfToken },
+            headers: {'X-Requested-With': 'XMLHttpRequest'},
+            success: function(res) {
+    const replyHtml = `
+        <div id="comment-container-${res.id}" class="d-flex gap-3 mb-3 animate__animated animate__fadeInLeft">
+            <img src="https://ui-avatars.com/api/?name=${res.user}&background=10b981&color=fff" class="rounded-circle" width="30" height="30">
+            <div class="bg-white p-2 rounded-3 flex-grow-1 border shadow-sm">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span class="fw-bold text-dark" style="font-size: 11px;">${res.user}</span>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="text-muted" style="font-size: 10px;">just now</span>
+                        <button class="btn btn-link btn-sm p-0 text-primary edit-comment-btn" data-id="${res.id}"><i class="fas fa-edit fa-xs" style="font-size: 9px;"></i></button>
+                        <button class="btn btn-link btn-sm p-0 text-danger delete-comment-btn" data-id="${res.id}"><i class="fas fa-trash fa-xs" style="font-size: 9px;"></i></button>
+                    </div>
+                </div>
+                <p id="comment-text-${res.id}" class="mb-0 small text-dark comment-body-text">${res.comment}</p>
+                <div id="edit-form-${res.id}" class="d-none mt-2">
+                    <textarea id="edit-textarea-${res.id}" class="form-control form-control-sm mb-2 edit-textarea" rows="2">${res.comment}</textarea>
+                    <div class="d-flex gap-2 justify-content-end">
+                        <button class="btn btn-xs btn-light cancel-edit-btn" data-id="${res.id}">Cancel</button>
+                        <button class="btn btn-xs btn-primary-custom save-edit-btn" data-id="${res.id}">Save</button>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+    $(`#replies-to-${parentId}`).append(replyHtml);
+    $form.find('textarea').val('');
+    $(`#reply-form-container-${parentId}`).addClass('d-none');
+    $('#comment-count').text(parseInt($('#comment-count').text()) + 1);
+    showNotification('Reply posted');
+}
+        });
+    });
+
+    // --- 2. UNIVERSAL EDIT HANDLER ---
+    $(document).on('click', '.edit-comment-btn', function() {
+        const id = $(this).data('id');
+        $(`#comment-text-${id}`).addClass('d-none');
+        $(`#edit-form-${id}`).removeClass('d-none');
+        $(`#edit-textarea-${id}`).focus();
+    });
+
+    $(document).on('click', '.cancel-edit-btn', function() {
+        const id = $(this).data('id');
+        $(`#edit-form-${id}`).addClass('d-none');
+        $(`#comment-text-${id}`).removeClass('d-none');
+    });
+
+    $(document).on('click', '.save-edit-btn', function() {
+        const id = $(this).data('id'), $btn = $(this), newText = $(`#edit-textarea-${id}`).val();
+        if (!newText.trim()) return;
+        $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+        $.ajax({
+            url: `/comment/${id}/edit/`,
+            type: 'POST',
+            data: { 'comment': newText, 'csrfmiddlewaretoken': csrfToken },
+            headers: {'X-Requested-With': 'XMLHttpRequest'},
+            success: function(res) {
+                $(`#comment-text-${id}`).text(res.comment).removeClass('d-none');
+                $(`#edit-form-${id}`).addClass('d-none');
+                $btn.prop('disabled', false).text('Save');
+                showNotification('Comment updated');
+            }
+        });
+    });
+
+    // --- 3. UNIVERSAL DELETE HANDLER ---
+    $(document).on('click', '.delete-comment-btn', function() {
+        if (!confirm("Delete this?")) return;
+        const id = $(this).data('id'), $container = $(`#comment-container-${id}`);
+        $.ajax({
+            url: `/comment/${id}/delete/`,
+            type: 'POST',
+            data: { 'csrfmiddlewaretoken': csrfToken },
+            headers: {'X-Requested-With': 'XMLHttpRequest'},
+            success: function() {
+                $container.fadeOut(500, function() { $(this).remove(); });
+                $('#comment-count').text(parseInt($('#comment-count').text()) - 1);
+                showNotification('Deleted successfully');
+            }
+        });
+    });
+
+    // --- 4. REPLY FORM TOGGLE ---
+    $(document).on('click', '.reply-btn', function() {
+        const id = $(this).data('id');
+        $(`#reply-form-container-${id}`).toggleClass('d-none');
+    });
+    
+    $(document).on('click', '.cancel-reply-btn', function() {
+        const id = $(this).data('id');
+        $(`#reply-form-container-${id}`).addClass('d-none');
+    });
+});
+</script>
+
+<style>
+
+
+    .card-custom { background: #fff; padding: 1.5rem; border-radius: 1rem; border: 1px solid #edf2f7; transition: all 0.3s ease; }
+    .shadow-inner { box-shadow: inset 0 2px 4px rgba(0,0,0,0.06); }
+    .beautiful-range { -webkit-appearance: none; height: 10px; background: #e2e8f0; border-radius: 10px; outline: none; }
+    .beautiful-range::-webkit-slider-thumb { -webkit-appearance: none; width: 24px; height: 24px; background: #6366f1; border: 4px solid #fff; border-radius: 50%; cursor: pointer; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4); }
+    .progress-bar { transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
+    .progress-bar.bg-danger { background-color: #ef4444 !important; }
+    .progress-bar.bg-warning { background-color: #f59e0b !important; }
+    .progress-bar.bg-success { background-color: #10b981 !important; }
+    .bg-light-hover:hover { background-color: #f3f4f6; cursor: pointer; }
+    .border-dashed { border-style: dashed !important; border-width: 2px !important; }
+    .leading-relaxed { line-height: 1.7; }
+    .btn-xs { padding: 0.15rem 0.5rem; font-size: 0.7rem; font-weight: 700; border-radius: 5px; }
+    .edit-textarea { border-radius: 10px; border: 1px solid #dee2e6; font-size: 0.85rem; }
+    
+  #uploadModal .border-dashed {
+    position: relative;
+    overflow: hidden;
+}
+
+#uploadModal .border-dashed input[type="file"] {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+
+
+    /* Vertical Activity Timeline Styling */
+.timeline-container {
+    position: relative;
+    padding-left: 20px;
+}
+
+.timeline-container::before {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #e5e7eb;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 1.5rem;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -20px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 2px solid white;
+    z-index: 2;
+    margin-top: 5px;
+}
+
+.timeline-content {
+    background: #f8fafc;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid #edf2f7;
+    transition: transform 0.2s;
+}
+
+.timeline-content:hover {
+    transform: translateX(5px);
+    background: #ffffff;
+}
+
+.extra-small {
+    font-size: 10px;
+}
+
+
+.timeline-wrapper {
+    position: relative;
+    padding-left: 20px;
+}
+
+/* The vertical line */
+.timeline-wrapper::before {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #e5e7eb;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 1.5rem;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -20px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 2px solid white;
+    z-index: 2;
+    margin-top: 6px;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.timeline-content {
+    background: #f8fafc;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid #edf2f7;
+    transition: all 0.2s ease;
+}
+
+.timeline-content:hover {
+    transform: translateX(5px);
+    background: #ffffff;
+    border-color: var(--primary);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.status-change-info .badge {
+    font-size: 9px;
+    letter-spacing: 0.5px;
+    font-weight: 700;
+}
+
+/* 1. Ensure modal is above backdrop */
+.modal { z-index: 1000001 !important; }
+.modal-backdrop { z-index: 1000000 !important; }
+
+/* 2. Make the file input cover the whole dashed box */
+#uploadModal .border-dashed { position: relative; }
+#uploadModal .border-dashed input[type="file"] {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    opacity: 0; cursor: pointer; z-index: 10;
+}
+
+/* 3. CRITICAL: Stop icons from stealing the click */
+#uploadModal .border-dashed i, 
+#uploadModal .border-dashed p {
+    pointer-events: none;
+}
+
+
+
+/* Fix the alignment of bubble and button */
+.progress-container-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+#progress-val-bubble {
+    min-width: 60px; /* Forces enough space for "100%" */
+    text-align: center;
+    flex-shrink: 0;
+}
+
+#btn-toggle-status-ajax {
+    min-width: 120px; /* Keeps the button size stable whether it says Mark Done or Re-open */
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+
+/* Add this to your style block */
+.d-flex.align-items-center.gap-2 {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end; /* Keeps items pushed to the right */
+    gap: 1rem !important;
+    flex-wrap: nowrap;
+}
+
+#progress-val-bubble {
+    order: 1; /* Bubble stays on left */
+    min-width: 55px;
+}
+
+#btn-toggle-status-ajax {
+    order: 2; /* Button stays on right */
+    min-width: 120px;
+}
+</style>
+{% endblock %} 
+
+
+{% comment %} {% extends 'base.html' %}
+
+{% block title %}{{ task.title }} | TaskFlow{% endblock %}
+{% block page_header %}Task Details{% endblock %}
+
+{% block content %}
+
+
+<div class="animate__animated animate__fadeIn">
+    
+    {% if is_locked %}
+    <div class="alert alert-warning border-0 shadow-sm d-flex align-items-center mb-4 rounded-3">
+        <i class="fas fa-lock fs-4 me-3"></i>
+        <div>
+            <strong class="d-block">Project Paused</strong>
+            This task is read-only because the parent project <strong>{{ task.project.name }}</strong> is inactive.
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="card-custom mb-4 border-start border-4 border-primary shadow-sm {% if is_locked %}opacity-75{% endif %}">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+            <div>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb mb-2">
+                        <li class="breadcrumb-item"><a href="{% url 'projects:project_list' %}" class="text-decoration-none text-primary fw-medium">{{ task.project.name }}</a></li>
+                        <li class="breadcrumb-item active">Task #{{ task.pk }}</li>
+                    </ol>
+                </nav>
+                <h2 class="fw-bold text-dark mb-2">{{ task.title }}</h2>
+                <div class="d-flex flex-wrap gap-2">
+                    <span id="main-status-badge" class="badge-pro {% if task.status == 'todo' %}bg-todo{% elif task.status == 'in_progress' %}bg-progress{% elif task.status == 'in_review' %}bg-warning{% else %}bg-done{% endif %}">
+                        <i class="fas fa-circle me-1" style="font-size: 7px;"></i> 
+                        <span class="status-label">{{ task.get_status_display }}</span>
+                    </span>
+                    <span class="badge-pro {% if task.priority == 'high' %}bg-high{% else %}bg-progress{% endif %}">
+                        <i class="fas fa-flag me-1"></i> {{ task.get_priority_display }}
+                    </span>
+                </div>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{% url 'tasks:task_list' %}" class="btn btn-light btn-sm fw-bold border text-muted shadow-sm"><i class="fas fa-arrow-left me-1 text-primary"></i> Back to TaskList</a>
+                {% if not is_locked %}
+                    {% if request.user.profile.role != 'developer' or task.assigned_to == request.user %}
+                    <a href="{% url 'tasks:task_update' task.pk %}" class="btn btn-light btn-sm fw-bold border text-muted shadow-sm">
+                        <i class="fas fa-edit me-1 text-warning"></i> Edit Task
+                    </a>
+                    {% endif %}
+                    
+                    {% if request.user.profile.role != 'developer' or task.assigned_by == request.user %}
+                    <a href="{% url 'tasks:task_delete' task.pk %}" class="btn btn-outline-danger btn-sm fw-bold shadow-sm">
+                        <i class="fas fa-trash-alt me-1"></i> Delete Task
+                    </a>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card-custom mb-4 shadow-sm">
+                <h6 class="fw-bold text-uppercase small text-muted mb-3 border-bottom pb-2">Description</h6>
+                <div class="text-dark leading-relaxed">
+                    {{ task.description|linebreaks|default:"No description provided." }}
+                </div>
+            </div>
+
+            <div class="card-custom mb-4 bg-light border-0 shadow-sm overflow-hidden">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold mb-0 text-uppercase small text-muted">Progress Tracking</h6>
+                    <div class="d-flex align-items-center gap-2">
+                        <span id="progress-val-bubble" class="badge rounded-pill shadow-sm px-3" style="font-size: 14px;">
+                            {{ task.progress }}%
+                        </span>
+                        {% if not is_locked and task.assigned_to == request.user %}
+                            <button id="btn-toggle-status-ajax" data-id="{{ task.pk }}" class="btn {% if task.status != 'completed' %}btn-success{% else %}btn-outline-primary bg-white{% endif %} btn-sm fw-bold py-1 px-2 shadow-sm" style="font-size: 11px;">
+                                <i class="fas {% if task.status != 'completed' %}fa-check-double{% else %}fa-redo{% endif %} me-1"></i> 
+                                <span id="status-btn-text">{% if task.status != 'completed' %}Mark Done{% else %}Re-open{% endif %}</span>
+                            </button>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="position-relative mb-4" style="padding: 0 10px;">
+                    <div class="progress shadow-inner" style="height: 18px; border-radius: 20px; background-color: #e9ecef; border: 1px solid #dee2e6;">
+                        <div id="visual-progress-bar" 
+                             class="progress-bar progress-bar-striped progress-bar-animated" 
+                             style="width: {{ task.progress }}%; border-radius: 20px; transition: width 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+                        </div>
+                    </div>
+                </div>
+                
+                {% if not is_locked and task.assigned_to == request.user %}
+                <div class="row g-2 align-items-center">
+                    <div class="col-8 col-md-10">
+                        <input type="range" id="ajax-progress-slider" min="0" max="100" step="5" value="{{ task.progress }}" 
+                               class="form-range beautiful-range" oninput="updateBeautifulUI(this.value)">
+                        <div class="d-flex justify-content-between mt-1 px-1 text-muted" style="font-size: 10px; font-weight: 800;">
+                            <span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span>
+                        </div>
+                    </div>
+                    <div class="col-4 col-md-2 text-end">
+                        <button id="btn-save-progress-ajax" data-id="{{ task.pk }}" class="btn btn-primary-custom w-100 btn-sm fw-bold shadow-sm rounded-3 py-2">Set</button>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="card-custom shadow-sm">
+                <h6 class="fw-bold mb-4"><i class="far fa-comments me-2 text-primary"></i>Discussion (<span id="comment-count">{{ comments.count }}</span>)</h6>
+                {% if not is_locked %}
+                <form id="ajax-comment-form" data-id="{{ task.pk }}" class="mb-4">
+                    {% csrf_token %}
+                    <div class="form-group mb-2">{{ comment_form.comment }}</div>
+                    <button type="submit" class="btn btn-primary-custom btn-sm fw-bold">Post Comment</button>
+                </form>
+                {% endif %}
+                <div id="comment-feed">
+                    {% for comment in comments %}
+                    <div id="comment-container-{{ comment.pk }}" class="d-flex gap-3 mb-4 animate__animated animate__fadeIn">
+                        <img src="https://ui-avatars.com/api/?name={{ comment.commented_by.username }}&background=6366f1&color=fff" class="rounded-circle shadow-sm" width="40" height="40">
+                        <div class="bg-light p-3 rounded-3 flex-grow-1 border shadow-sm position-relative">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="fw-bold small text-dark">{{ comment.commented_by.username }}</span>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="text-muted small" style="font-size: 11px;">{{ comment.created_at|timesince }} ago</span>
+                                    {% if comment.commented_by == request.user %}
+                                        <button class="btn btn-link btn-sm p-0 text-primary edit-comment-btn" data-id="{{ comment.pk }}"><i class="fas fa-edit fa-xs"></i></button>
+                                        <button class="btn btn-link btn-sm p-0 text-danger delete-comment-btn" data-id="{{ comment.pk }}"><i class="fas fa-trash fa-xs"></i></button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <p id="comment-text-{{ comment.pk }}" class="mb-0 small text-dark comment-body-text">{{ comment.comment }}</p>
+                            
+                            <div id="edit-form-{{ comment.pk }}" class="d-none mt-2 animate__animated animate__fadeInUp">
+                                <textarea id="edit-textarea-{{ comment.pk }}" class="form-control form-control-sm mb-2 edit-textarea" rows="2">{{ comment.comment }}</textarea>
+                                <div class="d-flex gap-2 justify-content-end">
+                                    <button class="btn btn-xs btn-light cancel-edit-btn" data-id="{{ comment.pk }}">Cancel</button>
+                                    <button class="btn btn-xs btn-primary-custom save-edit-btn" data-id="{{ comment.pk }}">Save</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card-custom mb-4 shadow-sm border-top border-4 border-primary">
+                <h6 class="fw-bold mb-3 border-bottom pb-2 text-uppercase small text-muted">Assignment</h6>
+                <div class="d-flex align-items-center mb-3">
+                    <img src="https://ui-avatars.com/api/?name={{ task.assigned_to.username }}&background=6366f1&color=fff" class="rounded-circle me-2" width="28" height="28">
+                    <span class="fw-bold text-dark">{{ task.assigned_to.username }}</span>
+                </div>
+                <div class="row g-3">
+                    <div class="col-6">
+                        <label class="small text-muted d-block">Due Date</label>
+                        <span class="fw-bold small text-dark">{{ task.due_date|date:"M d, Y"|default:"Not set" }}</span>
+                    </div>
+                    <div class="col-6">
+                        <label class="small text-muted d-block">Time Est.</label>
+                        <span class="fw-bold small text-dark">{{ task.estimated_hours|default:"0" }}h</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-custom mb-4 shadow-sm border-top border-4 border-info">
+                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                    <h6 class="fw-bold mb-0 text-uppercase small text-muted">Attachments</h6>
+                    {% if not is_locked %}
+                    <button class="btn btn-primary-custom btn-sm rounded-circle p-0 d-flex align-items-center justify-content-center shadow-sm" style="width: 24px; height: 24px;" data-bs-toggle="modal" data-bs-target="#uploadModal">
+                        <i class="fas fa-plus" style="font-size: 10px;"></i>
+                    </button>
+                    {% endif %}
+                </div>
+                <div id="attachment-list">
+                    {% for attachment in attachments %}
+                    <div id="attachment-row-{{ attachment.pk }}" class="p-2 border rounded-3 mb-2 d-flex align-items-center bg-light-hover transition-all position-relative attachment-row">
+                        <div class="file-icon me-3">
+                            {% with extension=attachment.file.url|lower %}
+                                {% if '.jpg' in extension or '.jpeg' in extension or '.png' in extension or '.gif' in extension %}
+                                    <i class="fas fa-file-image text-success fs-4"></i>
+                                {% elif '.pdf' in extension %}
+                                    <i class="fas fa-file-pdf text-danger fs-4"></i>
+                                {% else %}
+                                    <i class="fas fa-file-alt text-primary fs-4"></i>
+                                {% endif %}
+                            {% endwith %}
+                        </div>
+                        <div class="flex-grow-1 overflow-hidden">
+                            <span class="small fw-bold text-dark d-block text-truncate">{{ attachment.file_name }}</span>
+                            <small class="text-muted" style="font-size: 10px;">By {{ attachment.uploaded_by.username }}</small>
+                        </div>
+                        <div class="d-flex gap-2 ms-2" style="position: relative; z-index: 2;">
+                            <button class="btn p-1 text-muted border-0 bg-transparent view-file-btn" data-url="{{ attachment.file.url }}" data-name="{{ attachment.file_name }}">
+                                <i class="fas fa-eye small"></i>
+                            </button>
+                            <a href="{{ attachment.file.url }}" download class="text-muted p-1"><i class="fas fa-download small"></i></a>
+                            {% if not is_locked and request.user == attachment.uploaded_by or request.user.profile.role != 'developer' %}
+                            <button type="button" class="btn p-1 text-danger border-0 bg-transparent delete-attachment-btn" data-id="{{ attachment.pk }}">
+                                <i class="fas fa-trash-alt small"></i>
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div id="no-attachments-msg" class="text-center py-3 opacity-50 small italic border border-dashed rounded">No files.</div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="card-custom bg-dark text-white border-0 shadow-sm">
+                <h6 class="fw-bold mb-3 text-white-50 small text-uppercase" style="letter-spacing: 1px;">History Log</h6>
+                <div class="d-flex gap-3 mb-3">
+                    <i class="fas fa-plus-circle text-success mt-1"></i>
+                    <div>
+                        <small class="d-block text-white-50">Created on</small>
+                        <small class="fw-medium">{{ task.created_at|date:"M d, Y H:i" }}</small>
+                    </div>
+                </div>
+                <div class="d-flex gap-3">
+                    <i class="fas fa-sync-alt text-info mt-1"></i>
+                    <div>
+                        <small class="d-block text-white-50">Last activity</small>
+                        <small class="fw-medium">{{ task.updated_at|date:"M d, Y H:i" }}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="previewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="height: 85vh; border-radius: 20px;">
+            <div class="modal-header bg-dark text-white border-0">
+                <h5 class="modal-title fw-bold" id="previewFilename">File Preview</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0 bg-secondary position-relative overflow-hidden">
+                <iframe id="previewFrame" src="" width="100%" height="100%" frameborder="0"></iframe>
+                <div id="previewImageContainer" class="text-center d-none h-100 d-flex align-items-center justify-content-center bg-dark">
+                    <img id="previewImage" src="" class="img-fluid shadow-lg" style="max-height: 100%;">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="uploadModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="fw-bold text-dark mt-2 ms-2">Upload File</h5>
+                <button type="button" class="btn-close me-2 mt-1" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="ajax-upload-form" action="{% url 'tasks:add_attachment' task.pk %}" method="POST" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">File Display Name</label>
+                        {{ attachment_form.file_name }}
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small fw-bold text-muted">Select Document/Image</label>
+                        <div class="p-4 border border-dashed rounded-4 text-center bg-light position-relative">
+                            <i class="fas fa-cloud-upload-alt text-primary fs-1 mb-2"></i>
+                            <p id="file-upload-text" class="small text-muted mb-0">Click to choose or drag & drop</p>
+                            {{ attachment_form.file }}
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0 pb-4 px-4">
+                    <button type="button" class="btn btn-light fw-bold text-muted rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" id="btn-upload-submit" class="btn btn-primary-custom fw-bold rounded-pill px-4">Start Upload</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script>
+    let toastInstance;
+    const csrfToken = '{{ csrf_token }}';
+
+    function showNotification(message, isError = false) {
+    // 1. Target the container you already have in base.html
+    const container = document.querySelector('.toast-container');
+    if (!container) return; // Safety check
+
+    // 2. Create a unique ID for this specific alert
+    const toastId = 'toast-' + Date.now();
+    const bgColor = isError ? 'bg-danger' : 'bg-success';
+    const icon = isError ? 'fa-exclamation-triangle' : 'fa-check-circle';
+
+    // 3. Build the HTML string
+    const toastHtml = `
+        <div id="${toastId}" class="toast align-items-center text-white ${bgColor} border-0 shadow-lg mb-2" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="fas ${icon} me-2"></i> ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>`;
+
+    // 4. Inject it and trigger Bootstrap to show it
+    $(container).append(toastHtml);
+    const element = document.getElementById(toastId);
+    const toast = new bootstrap.Toast(element, { delay: 3000 });
+    toast.show();
+
+    // 5. Clean up the DOM after the toast disappears
+    element.addEventListener('hidden.bs.toast', () => {
+        element.remove();
+    });
+}
+
+    /**
+     * CENTRAL UI SYNC FUNCTION
+     * Keeps bubble, bar, and slider consistent.
+     */
+    function updateBeautifulUI(val) {
+        const value = parseInt(val);
+        const badge = $('#progress-val-bubble');
+        const progressBar = $('#visual-progress-bar');
+        const slider = $('#ajax-progress-slider');
+
+        badge.text(value + '%');
+        progressBar.css('width', value + '%');
+        if (slider.val() != value) slider.val(value);
+
+        badge.removeClass('bg-danger bg-warning bg-success text-dark');
+        progressBar.removeClass('bg-danger bg-warning bg-success');
+
+        if (value < 30) { badge.addClass('bg-danger'); progressBar.addClass('bg-danger'); } 
+        else if (value < 70) { badge.addClass('bg-warning text-dark'); progressBar.addClass('bg-warning'); } 
+        else { badge.addClass('bg-success'); progressBar.addClass('bg-success'); }
+    }
+
+    $(document).ready(function() {
+        updateBeautifulUI({{ task.progress }});
+
+        // --- ATTACHMENT FILENAME DISPLAY ---
+        $('#uploadModal input[type="file"]').on('change', function() {
+            const fileName = $(this).val().split('\\').pop();
+            if (fileName) { $('#file-upload-text').html(`<strong class="text-primary">${fileName}</strong> selected`); }
+            else { $('#file-upload-text').text('Click to choose or drag & drop'); }
+        });
+
+        // --- ATTACHMENT UPLOAD AJAX ---
+        $('#ajax-upload-form').on('submit', function(e) {
+            e.preventDefault();
+            const $form = $(this), $btn = $('#btn-upload-submit'), formData = new FormData(this);
+            $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Uploading...');
+
+            $.ajax({
+                url: $form.attr('action'),
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: {'X-Requested-With': 'XMLHttpRequest'},
+                success: function(res) {
+                    const iconClass = (res.extension.includes('pdf')) ? 'fa-file-pdf text-danger' : 
+                                      (['jpg','jpeg','png','gif'].some(ext => res.extension.includes(ext))) ? 'fa-file-image text-success' : 'fa-file-alt text-primary';
+                    
+                    const newHtml = `
+                        <div id="attachment-row-${res.id}" class="p-2 border rounded-3 mb-2 d-flex align-items-center bg-light-hover transition-all position-relative attachment-row animate__animated animate__fadeInDown">
+                            <div class="file-icon me-3"><i class="fas ${iconClass} fs-4"></i></div>
+                            <div class="flex-grow-1 overflow-hidden">
+                                <span class="small fw-bold text-dark d-block text-truncate">${res.file_name}</span>
+                                <small class="text-muted" style="font-size: 10px;">By ${res.user}</small>
+                            </div>
+                            <div class="d-flex gap-2 ms-2" style="position: relative; z-index: 2;">
+                                <button class="btn p-1 text-muted border-0 bg-transparent view-file-btn" data-url="${res.url}" data-name="${res.file_name}"><i class="fas fa-eye small"></i></button>
+                                <a href="${res.url}" download class="text-muted p-1"><i class="fas fa-download small"></i></a>
+                                <button type="button" class="btn p-1 text-danger border-0 bg-transparent delete-attachment-btn" data-id="${res.id}"><i class="fas fa-trash-alt small"></i></button>
+                            </div>
+                        </div>`;
+                    
+                    $('#no-attachments-msg').remove();
+                    $('#attachment-list').prepend(newHtml);
+                    $form[0].reset();
+                    $('#file-upload-text').text('Click to choose or drag & drop');
+                    bootstrap.Modal.getInstance(document.getElementById('uploadModal')).hide();
+                    $btn.prop('disabled', false).text('Start Upload');
+                    showNotification('File uploaded successfully');
+                }
+            });
+        });
+
+        // --- ATTACHMENT DELETE AJAX ---
+        $(document).on('click', '.delete-attachment-btn', function() {
+            if (!confirm("Remove this file?")) return;
+            const attachmentId = $(this).data('id');
+            const $row = $(`#attachment-row-${attachmentId}`);
+            $.ajax({
+                url: `/attachment/${attachmentId}/delete/`, 
+                type: 'POST',
+                data: {'csrfmiddlewaretoken': csrfToken},
+                headers: {'X-Requested-With': 'XMLHttpRequest'},
+                success: function(res) {
+                    $row.addClass('animate__animated animate__fadeOutRight');
+                    setTimeout(function() {
+                        $row.remove();
+                        if ($('#attachment-list').children('.attachment-row').length === 0) {
+                            $('#attachment-list').html('<div id="no-attachments-msg" class="text-center py-3 opacity-50 small italic border border-dashed rounded">No files.</div>');
+                        }
+                    }, 450);
+                    showNotification(res.message || 'File removed successfully');
+                }
+            });
+        });
+
+        // --- POST COMMENT AJAX ---
+        $('#ajax-comment-form').on('submit', function(e) {
+            e.preventDefault();
+            const taskId = $(this).data('id'), $form = $(this);
+            $.ajax({
+                url: `/tasks/${taskId}/comment/`,
+                type: 'POST',
+                data: $form.serialize(),
+                headers: {'X-Requested-With': 'XMLHttpRequest'},
+                success: function(res) {
+                    const newCommentHtml = `
+                        <div id="comment-container-${res.id}" class="d-flex gap-3 mb-4 animate__animated animate__fadeInDown">
+                            <img src="https://ui-avatars.com/api/?name=${res.user}&background=6366f1&color=fff" class="rounded-circle shadow-sm" width="40" height="40">
+                            <div class="bg-light p-3 rounded-3 flex-grow-1 border shadow-sm position-relative">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="fw-bold small text-dark">${res.user}</span>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="text-muted small" style="font-size: 11px;">just now</span>
+                                        <button class="btn btn-link btn-sm p-0 text-primary edit-comment-btn" data-id="${res.id}"><i class="fas fa-edit fa-xs"></i></button>
+                                        <button class="btn btn-link btn-sm p-0 text-danger delete-comment-btn" data-id="${res.id}"><i class="fas fa-trash fa-xs"></i></button>
+                                    </div>
+                                </div>
+                                <p id="comment-text-${res.id}" class="mb-0 small text-dark comment-body-text">${res.comment}</p>
+                                <div id="edit-form-${res.id}" class="d-none mt-2">
+                                    <textarea id="edit-textarea-${res.id}" class="form-control form-control-sm mb-2 edit-textarea" rows="2">${res.comment}</textarea>
+                                    <div class="d-flex gap-2 justify-content-end">
+                                        <button class="btn btn-xs btn-light cancel-edit-btn" data-id="${res.id}">Cancel</button>
+                                        <button class="btn btn-xs btn-primary-custom save-edit-btn" data-id="${res.id}">Save</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>`;
+                    $('#comment-feed').prepend(newCommentHtml);
+                    $form.find('textarea').val('');
+                    $('#comment-count').text(parseInt($('#comment-count').text()) + 1);
+                    showNotification('Comment posted');
+                }
+            });
+        });
+
+        // --- COMMENT EDIT/DELETE ACTIONS (FIXED) ---
+        $(document).on('click', '.edit-comment-btn', function() {
+            const id = $(this).data('id');
+            $(`#comment-text-${id}`).addClass('d-none');
+            $(`#edit-form-${id}`).removeClass('d-none');
+            $(`#edit-textarea-${id}`).focus();
+        });
+
+        $(document).on('click', '.cancel-edit-btn', function() {
+            const id = $(this).data('id');
+            $(`#edit-form-${id}`).addClass('d-none');
+            $(`#comment-text-${id}`).removeClass('d-none');
+        });
+
+        $(document).on('click', '.save-edit-btn', function() {
+            const id = $(this).data('id'), $btn = $(this), newText = $(`#edit-textarea-${id}`).val();
+            if (!newText.trim()) { showNotification('Comment cannot be empty', true); return; }
+            $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+            $.ajax({
+                url: `/comment/${id}/edit/`,
+                type: 'POST',
+                data: {'comment': newText, 'csrfmiddlewaretoken': csrfToken},
+                headers: {'X-Requested-With': 'XMLHttpRequest'},
+                success: function(res) {
+                    $(`#comment-text-${id}`).text(res.comment).removeClass('d-none');
+                    $(`#edit-form-${id}`).addClass('d-none');
+                    $btn.prop('disabled', false).text('Save');
+                    showNotification('Comment updated');
+                }
+            });
+        });
+
+        $(document).on('click', '.delete-comment-btn', function() {
+            if (!confirm("Delete this comment?")) return;
+            const id = $(this).data('id');
+            $.ajax({
+                url: `/comment/${id}/delete/`,
+                type: 'POST',
+                data: {'csrfmiddlewaretoken': csrfToken},
+                headers: {'X-Requested-With': 'XMLHttpRequest'},
+                success: function() {
+                    $(`#comment-container-${id}`).fadeOut(500, function() { $(this).remove(); });
+                    $('#comment-count').text(parseInt($('#comment-count').text()) - 1);
+                    showNotification('Comment deleted');
+                }
+            });
+        });
+
+        // File Previews
+        $(document).on('click', '.view-file-btn', function() {
+            const fileUrl = $(this).data('url'), fileName = $(this).data('name'), extension = fileUrl.split('.').pop().toLowerCase();
+            $('#previewFilename').text(fileName);
+            const $iframe = $('#previewFrame'), $imgContainer = $('#previewImageContainer'), $img = $('#previewImage');
+            if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension)) {
+                $iframe.addClass('d-none').attr('src', '');
+                $img.attr('src', fileUrl); $imgContainer.removeClass('d-none');
+            } else {
+                $imgContainer.addClass('d-none'); $img.attr('src', '');
+                $iframe.removeClass('d-none').attr('src', fileUrl);
+            }
+            new bootstrap.Modal(document.getElementById('previewModal')).show();
+        });
+
+        // --- PROGRESS & STATUS AJAX (INTELLIGENT SYNC) ---
+        $('#btn-save-progress-ajax').on('click', function() {
+            const taskId = $(this).data('id'), val = $('#ajax-progress-slider').val(), $btn = $(this);
+            $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+            $.ajax({
+                url: `/tasks/${taskId}/progress/`,
+                type: 'POST',
+                data: {'progress': val, 'csrfmiddlewaretoken': csrfToken},
+                headers: {'X-Requested-With': 'XMLHttpRequest'},
+                success: function(res) {
+                    $btn.prop('disabled', false).text('Set');
+                    updateBeautifulUI(res.progress);
+                    $('.status-label').text(res.new_status);
+                    const mainBadge = $('#main-status-badge');
+                    mainBadge.removeClass('bg-todo bg-progress bg-warning bg-done');
+                    if (res.progress == 100) mainBadge.addClass('bg-done'); 
+                    else if (res.progress == 0) mainBadge.addClass('bg-todo'); 
+                    else mainBadge.addClass('bg-progress');
+                    
+                    const $toggleBtn = $('#btn-toggle-status-ajax');
+                    if (res.progress == 100) {
+                        $toggleBtn.removeClass('btn-success').addClass('btn-outline-primary bg-white');
+                        $toggleBtn.find('i').removeClass('fa-check-double').addClass('fa-redo');
+                        $('#status-btn-text').text('Re-open');
+                    } else {
+                        $toggleBtn.removeClass('btn-outline-primary bg-white').addClass('btn-success');
+                        $toggleBtn.find('i').removeClass('fa-redo').addClass('fa-check-double');
+                        $('#status-btn-text').text('Mark Done');
+                    }
+                    showNotification(`Progress updated to ${res.progress}%`);
+                }
+            });
+        });
+
+        $('#btn-toggle-status-ajax').on('click', function() {
+            const taskId = $(this).data('id'), $btn = $(this), $btnText = $('#status-btn-text');
+            const nextStatus = ($btnText.text().trim() === 'Mark Done') ? 'completed' : 'in_progress';
+            $.ajax({
+                url: `/tasks/${taskId}/status/`,
+                type: 'POST',
+                data: {'status': nextStatus, 'csrfmiddlewaretoken': csrfToken},
+                headers: {'X-Requested-With': 'XMLHttpRequest'},
+                success: function(res) {
+                    updateBeautifulUI(res.progress);
+                    $('.status-label').text(res.new_status);
+                    $('#main-status-badge').removeClass('bg-todo bg-progress bg-warning bg-done').addClass(res.progress === 100 ? 'bg-done' : 'bg-progress');
+                    
+                    if (res.progress === 100) {
+                        $btn.removeClass('btn-success').addClass('btn-outline-primary bg-white');
+                        $btn.find('i').removeClass('fa-check-double').addClass('fa-redo');
+                        $btnText.text('Re-open');
+                    } else {
+                        $btn.removeClass('btn-outline-primary bg-white').addClass('btn-success');
+                        $btn.find('i').removeClass('fa-redo').addClass('fa-check-double');
+                        $btnText.text('Mark Done');
+                    }
+                    showNotification(`Status updated to ${res.new_status}`);
+                }
+            });
+        });
+    });
+</script>
+
+<style>
+    .card-custom { background: #fff; padding: 1.5rem; border-radius: 1rem; border: 1px solid #edf2f7; transition: all 0.3s ease; }
+    .shadow-inner { box-shadow: inset 0 2px 4px rgba(0,0,0,0.06); }
+    .beautiful-range { -webkit-appearance: none; height: 10px; background: #e2e8f0; border-radius: 10px; outline: none; }
+    .beautiful-range::-webkit-slider-thumb { -webkit-appearance: none; width: 24px; height: 24px; background: #6366f1; border: 4px solid #fff; border-radius: 50%; cursor: pointer; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4); }
+    .progress-bar { transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
+    .progress-bar.bg-danger { background-color: #ef4444 !important; }
+    .progress-bar.bg-warning { background-color: #f59e0b !important; }
+    .progress-bar.bg-success { background-color: #10b981 !important; }
+    .bg-light-hover:hover { background-color: #f3f4f6; cursor: pointer; }
+    .border-dashed { border-style: dashed !important; border-width: 2px !important; }
+    .leading-relaxed { line-height: 1.7; }
+    .btn-xs { padding: 0.15rem 0.5rem; font-size: 0.7rem; font-weight: 700; border-radius: 5px; }
+    .edit-textarea { border-radius: 10px; border: 1px solid #dee2e6; font-size: 0.85rem; }
+    #uploadModal input[type="file"] { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+</style>
+{% endblock %}  {% endcomment %}

@@ -1,0 +1,430 @@
+{% extends 'base.html' %}
+
+{% block title %}Task Inventory | TaskFlow{% endblock %}
+{% block page_header %}Task Inventory{% endblock %}
+
+{% block content %}
+<div class="animate__animated animate__fadeIn">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <h4 class="fw-bold text-dark mb-0">Full Task Inventory</h4>
+            <p class="text-muted small mb-0">Manage and track progress across your workspace.</p>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+            <div class="position-relative" style="width: 250px;">
+                <i class="fas fa-search position-absolute top-50 translate-middle-y ms-3 text-muted"></i>
+                <input type="text" id="smart-search-inventory" class="form-control ps-5 rounded-pill border-0 shadow-sm" placeholder="Search tasks..." value="{{ request.GET.q }}">
+            </div>
+
+            <div class="btn-group bg-white p-1 rounded-3 shadow-sm border">
+                <button class="btn btn-sm btn-inventory-view active btn-primary shadow-sm" data-view="all">All</button>
+                <button class="btn btn-sm btn-inventory-view btn-light text-muted border-0" data-view="mine">My Tasks</button>
+                <button class="btn btn-sm btn-inventory-view btn-light text-muted border-0" data-view="team">Teammates</button>
+            </div>
+
+            <div class="btn-group bg-white p-1 rounded-3 shadow-sm border">
+                <button class="btn btn-sm btn-inventory-status active btn-primary shadow-sm" data-status="active">Active Work</button>
+                <button class="btn btn-sm btn-inventory-status btn-light text-muted border-0" data-status="on_hold">On Hold / InActive Work</button>
+                <button class="btn btn-sm btn-inventory-status btn-light text-muted border-0" data-status="completed">Done</button>
+            </div>
+            
+            <button class="btn btn-white border shadow-sm btn-sm fw-bold px-3" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse">
+                <i class="fas fa-filter me-1 text-primary"></i> Filters
+            </button>
+
+            {% if request.user.profile.role != 'developer' %}
+            <a href="{% url 'tasks:task_create' %}" class="btn btn-primary btn-sm fw-bold shadow-sm d-flex align-items-center">
+                <i class="fas fa-plus me-1"></i> New Task
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="collapse mb-4" id="filterCollapse">
+        <div class="card-custom border-0 shadow-sm bg-light p-3">
+            <form id="filter-form-ajax" class="row g-3">
+                <div class="col-md-3">{{ filter.form.project }}</div>
+                <div class="col-md-3">{{ filter.form.status }}</div>
+                <div class="col-md-3">{{ filter.form.priority }}</div>
+                <div class="col-md-3 d-flex align-items-end gap-2">
+                    <button type="submit" class="btn btn-primary btn-sm flex-grow-1 fw-bold">Apply Filters</button>
+                    <button type="button" id="btn-reset-filters" class="btn btn-white btn-sm border fw-bold text-muted">Reset</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="ajax-table-container" class="card-custom border-0 shadow-sm p-0 overflow-hidden">
+        {% include 'tasks/includes/task_inventory_table.html' %}
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script>
+$(document).ready(function() {
+    let searchTimer;
+    let currentView = 'all';
+    let currentStatus = 'active';
+    const csrfToken = '{{ csrf_token }}';
+
+    // 1. Toast Notification Function
+    function showNotification(message, isError = false) {
+        const container = document.querySelector('.toast-container');
+        if (!container) return;
+
+        const toastId = 'toast-' + Date.now();
+        const bgColor = isError ? 'bg-danger' : 'bg-success';
+        const icon = isError ? 'fa-exclamation-triangle' : 'fa-check-circle';
+
+        const toastHtml = `
+            <div id="${toastId}" class="toast align-items-center text-white ${bgColor} border-0 shadow-lg mb-2" role="alert">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="fas ${icon} me-2"></i> ${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            </div>`;
+
+        $(container).append(toastHtml);
+        const element = document.getElementById(toastId);
+        const toast = new bootstrap.Toast(element, { delay: 3000 });
+        toast.show();
+
+        element.addEventListener('hidden.bs.toast', () => { element.remove(); });
+    }
+
+    function updateButtonUI($clickedBtn, groupClass) {
+        $clickedBtn.siblings(`.${groupClass}`).removeClass('btn-primary shadow-sm active').addClass('btn-light text-muted border-0');
+        $clickedBtn.addClass('btn-primary shadow-sm active').removeClass('btn-light text-muted border-0');
+    }
+
+    function fetchInventoryData(page = 1) {
+        const query = $('#smart-search-inventory').val();
+        const $container = $('#ajax-table-container');
+        const formData = $('#filter-form-ajax').serializeArray();
+        let params = { 'page': page, 'view': currentView, 'proj_status': currentStatus, 'q': query };
+        $.each(formData, function(i, field) { if (field.value) params[field.name] = field.value; });
+
+        $container.css('opacity', '0.5');
+        $.ajax({
+            url: window.location.pathname,
+            data: params,
+            headers: {'X-Requested-With': 'XMLHttpRequest'},
+            success: function(response) {
+                $container.html(response.html).css('opacity', '1');
+                var dropdownElementList = [].slice.call(document.querySelectorAll('[data-bs-toggle="dropdown"]'));
+                dropdownElementList.map(function (el) { return new bootstrap.Dropdown(el); });
+            }
+        });
+    }
+
+    // Filter & Search Events
+    $('#filter-form-ajax').on('submit', function(e) {
+        e.preventDefault();
+        fetchInventoryData(1);
+    });
+
+    $(document).on('click', '.ajax-page', function(e) {
+        e.preventDefault();
+        fetchInventoryData($(this).data('page'));
+    });
+
+    $('#btn-reset-filters').on('click', function() {
+        $('#filter-form-ajax')[0].reset();
+        fetchInventoryData(1);
+    });
+
+    $(document).on('click', '.btn-inventory-view', function() {
+        updateButtonUI($(this), 'btn-inventory-view');
+        currentView = $(this).data('view');
+        fetchInventoryData(1);
+    });
+
+    $(document).on('click', '.btn-inventory-status', function() {
+        updateButtonUI($(this), 'btn-inventory-status');
+        currentStatus = $(this).data('status');
+        fetchInventoryData(1);
+    });
+
+    $('#smart-search-inventory').on('keyup', function() {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => fetchInventoryData(1), 300);
+    });
+
+    // 2. REALTIME STATUS UPDATE (Dropdown)
+    $(document).on('click', '.status-update-link', function(e) {
+        e.preventDefault();
+        const taskPk = $(this).data('pk');
+        const url = $(this).data('url');
+        const newStatus = $(this).data('value');
+        
+        const $statusBadge = $(`.status-text-${taskPk}`);
+        const $slider = $(`.progress-slider[data-pk="${taskPk}"]`);
+        const $label = $(`.progress-label-${taskPk}`);
+        //const $row = $(`#task-row-${taskPk}`);
+
+        $.ajax({
+            url: url,
+            type: 'POST',
+            data: { 'status': newStatus, 'csrfmiddlewaretoken': csrfToken },
+            success: function(response) {
+                if (response.status === 'success') {
+                    // Update Badge
+                    $statusBadge.text(response.new_status).removeClass('bg-done bg-danger text-white bg-todo bg-progress bg-info text-dark');
+                    if (newStatus === 'completed') $statusBadge.addClass('bg-done');
+                    else if (newStatus === 'blocked') $statusBadge.addClass('bg-danger text-white');
+                    else if (newStatus === 'todo') $statusBadge.addClass('bg-todo');
+                    else if (newStatus === 'in_review') $statusBadge.addClass('bg-info text-dark');
+                    else $statusBadge.addClass('bg-progress');
+
+                    // Sync Slider
+                    if (response.progress !== undefined) {
+                        $slider.val(response.progress);
+                        $label.text(response.progress + '%');
+                    }
+                    
+                    showNotification(`Task status updated to ${response.new_status}`);
+                }
+            },
+            error: function(xhr) {
+                const msg = xhr.responseJSON ? xhr.responseJSON.message : "Error updating status";
+                showNotification(msg, true);
+            }
+        });
+    });
+
+    // 3. REALTIME PROGRESS UPDATE (Slider)
+    $(document).on('change', '.progress-slider', function() {
+        const taskPk = $(this).data('pk');
+        const newVal = $(this).val();
+        const $statusBadge = $(`.status-text-${taskPk}`);
+        const $label = $(`.progress-label-${taskPk}`);
+
+        $.ajax({
+            url: `/tasks/${taskPk}/progress/`,
+            type: 'POST',
+            data: { 'progress': newVal, 'csrfmiddlewaretoken': csrfToken },
+            success: function(response) {
+                $label.text(newVal + '%');
+                
+                // Update badge if status synced (e.g., 100% -> Completed)
+                $statusBadge.text(response.new_status).removeClass('bg-done bg-danger text-white bg-todo bg-progress');
+                let st = response.new_status.toLowerCase();
+                if (st.includes('completed')) $statusBadge.addClass('bg-done');
+                else if (st.includes('todo')) $statusBadge.addClass('bg-todo');
+                else if (st.includes('blocked')) $statusBadge.addClass('bg-danger text-white');
+                else $statusBadge.addClass('bg-progress');
+
+                showNotification(`Progress set to ${newVal}% (${response.new_status})`);
+            },
+            error: function(xhr) {
+                const msg = xhr.responseJSON ? xhr.responseJSON.message : "Error updating progress";
+                showNotification(msg, true);
+                // Refresh to reset slider position to actual DB value
+                fetchInventoryData(1);
+            }
+        });
+    });
+});
+</script>
+
+<style>
+    .btn-action { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; transition: all 0.2s ease; border: 1px solid #edf2f7; }
+    .btn-detail { background: #f8fafc; color: #64748b; }
+    .btn-detail:hover { background: #6366f1; color: white; border-color: #6366f1; }
+    .btn-edit { background: #fffbeb; color: #d97706; }
+    .btn-edit:hover { background: #f59e0b; color: white; border-color: #f59e0b; }
+    .grayscale-filter { filter: grayscale(1); }
+    .bg-high { background-color: #fee2e2; color: #ef4444; }
+</style>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+{% comment %} {% extends 'base.html' %}
+
+{% block title %}Task Inventory | TaskFlow{% endblock %}
+{% block page_header %}Task Inventory{% endblock %}
+
+{% block content %}
+<div class="animate__animated animate__fadeIn">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <h4 class="fw-bold text-dark mb-0">Full Task Inventory</h4>
+            <p class="text-muted small mb-0">Manage and track progress across your workspace.</p>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+            <div class="position-relative" style="width: 250px;">
+                <i class="fas fa-search position-absolute top-50 translate-middle-y ms-3 text-muted"></i>
+                <input type="text" id="smart-search-inventory" class="form-control ps-5 rounded-pill border-0 shadow-sm" placeholder="Search tasks..." value="{{ request.GET.q }}">
+            </div>
+
+            <div class="btn-group bg-white p-1 rounded-3 shadow-sm border">
+                <button class="btn btn-sm btn-inventory-view active btn-primary shadow-sm" data-view="all">All</button>
+                <button class="btn btn-sm btn-inventory-view btn-light text-muted border-0" data-view="mine">My Tasks</button>
+                <button class="btn btn-sm btn-inventory-view btn-light text-muted border-0" data-view="team">Teammates</button>
+            </div>
+
+            <div class="btn-group bg-white p-1 rounded-3 shadow-sm border">
+                <button class="btn btn-sm btn-inventory-status active btn-primary shadow-sm" data-status="active">Active Work</button>
+                <button class="btn btn-sm btn-inventory-status btn-light text-muted border-0" data-status="on_hold">On Hold</button>
+                <button class="btn btn-sm btn-inventory-status btn-light text-muted border-0" data-status="completed">Done</button>
+            </div>
+            
+            <button class="btn btn-white border shadow-sm btn-sm fw-bold px-3" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse">
+                <i class="fas fa-filter me-1 text-primary"></i> Filters
+            </button>
+
+            {% if request.user.profile.role != 'developer' %}
+            <a href="{% url 'tasks:task_create' %}" class="btn btn-primary btn-sm fw-bold shadow-sm d-flex align-items-center">
+                <i class="fas fa-plus me-1"></i> New Task
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="collapse mb-4" id="filterCollapse">
+        <div class="card-custom border-0 shadow-sm bg-light p-3">
+            <form id="filter-form-ajax" class="row g-3">
+                <div class="col-md-3">{{ filter.form.project }}</div>
+                <div class="col-md-3">{{ filter.form.status }}</div>
+                <div class="col-md-3">{{ filter.form.priority }}</div>
+                <div class="col-md-3 d-flex align-items-end gap-2">
+                    <button type="submit" class="btn btn-primary btn-sm flex-grow-1 fw-bold">Apply Filters</button>
+                    <button type="button" id="btn-reset-filters" class="btn btn-white btn-sm border fw-bold text-muted">Reset</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="ajax-table-container" class="card-custom border-0 shadow-sm p-0 overflow-hidden">
+        {% include 'tasks/includes/task_inventory_table.html' %}
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script>
+$(document).ready(function() {
+    let searchTimer;
+    let currentView = 'all';
+    let currentStatus = 'active';
+
+    function updateButtonUI($clickedBtn, groupClass) {
+        $clickedBtn.siblings(`.${groupClass}`).removeClass('btn-primary shadow-sm active').addClass('btn-light text-muted border-0');
+        $clickedBtn.addClass('btn-primary shadow-sm active').removeClass('btn-light text-muted border-0');
+    }
+
+    // --- 1. CORE AJAX LOADING ---
+    function fetchInventoryData(page = 1) {
+        const query = $('#smart-search-inventory').val();
+        const $container = $('#ajax-table-container');
+        const formData = $('#filter-form-ajax').serializeArray();
+        
+        let params = { 'page': page, 'view': currentView, 'proj_status': currentStatus, 'q': query };
+        $.each(formData, function(i, field) { if(field.value) params[field.name] = field.value; });
+
+        $container.css('opacity', '0.5');
+        $.ajax({
+            url: window.location.pathname,
+            data: params,
+            headers: {'X-Requested-With': 'XMLHttpRequest'},
+            success: function(response) {
+                $container.html(response.html).css('opacity', '1');
+            }
+        });
+    }
+
+    $(document).on('click', '.btn-inventory-view', function() {
+        updateButtonUI($(this), 'btn-inventory-view');
+        currentView = $(this).data('view');
+        fetchInventoryData(1);
+    });
+
+    $(document).on('click', '.btn-inventory-status', function() {
+        updateButtonUI($(this), 'btn-inventory-status');
+        currentStatus = $(this).data('status');
+        fetchInventoryData(1);
+    });
+
+    $('#smart-search-inventory').on('keyup', function() {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => fetchInventoryData(1), 300);
+    });
+
+    // --- 2. DROPDOWN STATUS UPDATE (REAL-TIME) ---
+    $(document).on('click', '.status-update-link', function(e) {
+        e.preventDefault();
+        const taskPk = $(this).data('pk');
+        const newStatus = $(this).data('value');
+        const $badge = $(`.status-badge-${taskPk}`);
+        const $slider = $(`.progress-slider[data-pk="${taskPk}"]`);
+        const $label = $(`.progress-label-${taskPk}`);
+        const $row = $(`#task-row-${taskPk}`);
+
+        $.ajax({
+            url: `/tasks/update-status/${taskPk}/`,
+            type: 'POST',
+            data: { 'status': newStatus, 'csrfmiddlewaretoken': '{{ csrf_token }}' },
+            success: function(response) {
+                if (response.status === 'success') {
+                    $badge.text(response.new_status).removeClass('bg-done bg-danger text-white bg-todo bg-progress');
+                    if (newStatus === 'completed') $badge.addClass('bg-done');
+                    else if (newStatus === 'blocked') $badge.addClass('bg-danger text-white');
+                    else if (newStatus === 'todo') $badge.addClass('bg-todo');
+                    else $badge.addClass('bg-progress');
+
+                    if (response.progress !== undefined) {
+                        $slider.val(response.progress);
+                        $label.text(response.progress + '%');
+                    }
+                    
+                    if (newStatus === 'blocked') $row.addClass('bg-danger bg-opacity-10');
+                    else $row.removeClass('bg-danger bg-opacity-10');
+                }
+            }
+        });
+    });
+
+    // --- 3. SLIDER UPDATE (REAL-TIME) ---
+    $(document).on('change', '.progress-slider', function() {
+        const taskPk = $(this).data('pk');
+        const newVal = $(this).val();
+        const $label = $(`.progress-label-${taskPk}`);
+        const $badge = $(`.status-badge-${taskPk}`);
+
+        $.ajax({
+            url: `/tasks/${taskPk}/progress/`,
+            type: 'POST',
+            data: { 'progress': newVal, 'csrfmiddlewaretoken': '{{ csrf_token }}' },
+            success: function(response) {
+                $label.text(newVal + '%');
+                $badge.text(response.new_status).removeClass('bg-done bg-danger text-white bg-todo bg-progress');
+                let st = response.new_status.toLowerCase();
+                if (st === 'completed') $badge.addClass('bg-done');
+                else if (st === 'todo') $badge.addClass('bg-todo');
+                else if (st === 'blocked') $badge.addClass('bg-danger text-white');
+                else $badge.addClass('bg-progress');
+            }
+        });
+    });
+});
+</script>
+{% endblock %} {% endcomment %}

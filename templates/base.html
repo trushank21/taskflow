@@ -1,0 +1,496 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}TaskFlow{% endblock %}</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+
+    <style>
+        .bg-warning { background-color: #fef3c7 !important; color: #92400e !important; }
+        .bg-danger { background-color: #fee2e2 !important; color: #b91c1c !important; }
+        .bg-danger.text-white { background-color: #ef4444 !important; color: #ffffff !important; }
+
+        :root {
+            --sidebar-width: 260px;
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --primary-light: #eef2ff;
+            --bg-body: #f9fafb;
+            --text-dark: #111827;
+            --text-muted: #6b7280;
+            --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-dark);
+            overflow-x: hidden;
+        }
+
+        /* --- NOTIFICATION ANIMATIONS --- */
+        .alert {
+            transition: all 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            position: relative;
+            z-index: 1;
+        }
+
+        /* The class applied via JS to trigger the smooth exit */
+        .alert-fade-out {
+            opacity: 0;
+            transform: translateY(-20px);
+            margin-top: -60px; /* Pulls content up smoothly */
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* --- SMART TOP PROGRESS BAR --- */
+        #nprogress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 3px;
+            background: var(--primary);
+            width: 0%;
+            z-index: 2000;
+            transition: width 0.4s ease;
+        }
+
+        /* --- SIDEBAR --- */
+        #sidebar {
+            width: var(--sidebar-width);
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            background: #ffffff;
+            border-right: 1px solid #e5e7eb;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1035;
+        }
+
+        #sidebar.collapsed { margin-left: calc(-1 * var(--sidebar-width)); }
+
+        .sidebar-brand {
+            padding: 1.5rem;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .nav-menu { padding: 1rem 0.75rem; }
+        
+        .nav-link-custom {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.25rem;
+            border-radius: 0.5rem;
+            color: #4b5563;
+            font-weight: 500;
+            transition: 0.2s;
+            text-decoration: none;
+        }
+
+        .nav-link-custom:hover {
+            background-color: var(--primary-light);
+            color: var(--primary);
+        }
+
+        .nav-link-custom.active {
+            background-color: var(--primary-light);
+            color: var(--primary);
+        }
+
+        .nav-link-custom i { width: 24px; font-size: 1.1rem; margin-right: 0.75rem; }
+
+        /* --- MAIN WRAPPER --- */
+        #main-wrapper {
+            margin-left: var(--sidebar-width);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            min-height: 100vh;
+        }
+
+        #main-wrapper.full { margin-left: 0; }
+
+        /* --- TOPBAR --- */
+        .top-navbar {
+            height: 64px;
+            background: #ffffff;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 1.5rem;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .toggle-sidebar {
+            cursor: pointer;
+            font-size: 1.25rem;
+            color: var(--text-muted);
+            padding: 5px;
+        }
+
+        /* --- CONTENT AREA --- */
+        .content-area { padding: 2rem; }
+
+        /* --- GLOBAL UI COMPONENTS --- */
+        .card-custom {
+            background: white;
+            border-radius: 12px;
+            border: none;
+            box-shadow: var(--card-shadow);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .btn-primary-custom {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: 0.3s;
+        }
+
+        .btn-primary-custom:hover {
+            background-color: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+
+        .badge-pro {
+            padding: 0.4em 0.8em;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+        }
+
+        .bg-todo { background: #f3f4f6; color: #374151; }
+        .bg-progress { background: #e0f2fe; color: #0369a1; }
+        .bg-done { background: #dcfce7; color: #166534; }
+        .bg-high { background: #fee2e2; color: #991b1b; }
+
+        #sidebar-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.3);
+            display: none;
+            z-index: 1030;
+            backdrop-filter: blur(2px);
+        }
+
+        #loader-wrapper {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #ffffff;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            transition: opacity 0.5s ease;
+        }
+
+        .rocket-loader-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .rocket-icon-box {
+            font-size: 3.5rem;
+            color: var(--primary);
+            transform: rotate(-45deg);
+            animation: rocket-float 1.5s infinite ease-in-out;
+        }
+
+        @keyframes rocket-float {
+            0%, 100% { transform: rotate(-45deg) translate(0, 0); }
+            50% { transform: rotate(-45deg) translate(5px, -5px); }
+        }
+
+        .loader-brand {
+            letter-spacing: 5px;
+            font-size: 1.1rem;
+            opacity: 0.8;
+        }
+
+        .loading-bar-container {
+            width: 140px;
+            height: 3px;
+            background: #f1f5f9;
+            border-radius: 10px;
+            margin-top: 20px;
+            overflow: hidden;
+        }
+
+        .loading-bar-fill {
+            width: 40%;
+            height: 100%;
+            background: var(--primary);
+            border-radius: 10px;
+            animation: progress-slide 1.2s infinite ease-in-out;
+        }
+
+        @keyframes progress-slide {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(250%); }
+        }
+
+        @media (max-width: 992px) {
+            #sidebar { left: -260px; }
+            #sidebar.show { left: 0; }
+            #main-wrapper { margin-left: 0; }
+            #sidebar-overlay.show { display: block; }
+        }
+
+
+
+{% comment %} /* --- GLOBAL MODAL FIXES --- */
+/* Force modals to sit above your loader (10000) */
+/* --- GLOBAL MODAL FIXES --- */
+.modal {
+    z-index: 11000 !important; /* Must be higher than loader (10000) */
+}
+.modal-backdrop {
+    z-index: 10900 !important; /* Just below the modal */
+}
+.modal-content {
+    position: relative;
+    z-index: 11010 !important;
+}
+
+/* Ensure the sidebar overlay doesn't block the screen when hidden */
+#sidebar-overlay:not(.show) {
+    display: none !important;
+    pointer-events: none;
+}
+
+/* Fix for the "frozen" body */
+body.modal-open {
+    overflow: hidden !important;
+    padding-right: 0 !important;
+} {% endcomment %}
+
+    </style>
+</head>
+<body>
+
+    <div id="loader-wrapper">
+        <div class="rocket-loader-container">
+            <div class="rocket-icon-box">
+                <i class="fas fa-rocket text-primary"></i>
+            </div>
+        </div>
+        <h4 class="loader-brand text-primary mt-4 fw-bold">TASKFLOW</h4>
+        <div class="loading-bar-container">
+            <div class="loading-bar-fill"></div>
+        </div>
+    </div>
+
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
+        {% if messages %}
+            {% for message in messages %}
+            <div class="toast align-items-center text-white {% if message.tags == 'success' %}bg-success{% elif message.tags == 'warning' %}bg-warning{% else %}bg-primary{% endif %} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="fas {% if message.tags == 'success' %}fa-check-circle{% else %}fa-info-circle{% endif %} me-2"></i>
+                        {{ message }}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            </div>
+            {% endfor %}
+        {% endif %}
+    </div>
+
+    <div id="nprogress-bar"></div>
+
+    {% if user.is_authenticated %}
+    <div id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+    <aside id="sidebar">
+        <div class="sidebar-brand">
+            <i class="fas fa-rocket me-2"></i> TaskFlow
+        </div>
+        <div class="nav-menu">
+            <a href="{% url 'tasks:dashboard' %}" class="nav-link-custom {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                <i class="fas fa-chart-pie"></i> Dashboard
+            </a>
+
+            <a href="{% url 'projects:project_list' %}" class="nav-link-custom {% if 'projects' in request.path %}active{% endif %}">
+                <i class="fas fa-folder"></i> Projects
+            </a>
+
+            <a href="{% url 'tasks:task_list' %}" class="nav-link-custom {% if 'tasks/' in request.path %}active{% endif %}">
+                <i class="fas fa-tasks"></i> Tasks
+            </a>
+
+            {% if user.profile.role == 'admin' or user.profile.role == 'manager' or user.profile.role == 'observer' %}
+            <hr class="text-muted opacity-25 mx-3">
+            <div class="px-3 mb-2 small text-uppercase fw-bold text-muted" style="font-size: 0.7rem; letter-spacing: 1px;">Management</div>
+            
+            <a href="{% url 'accounts:resource_dashboard' %}" class="nav-link-custom {% if 'resource-dashboard' in request.path %}active{% endif %}">
+                <i class="fas fa-users-gear"></i> Team Resources
+            </a>
+            {% endif %}
+
+            <hr class="text-muted opacity-25 mx-3">
+
+            <a href="{% url 'accounts:profile' %}" class="nav-link-custom {% if 'profile' in request.path or 'password' in request.path %}active{% endif %}">
+                <i class="fas fa-user-circle"></i> Profile
+            </a>
+        </div>
+    </aside>
+    {% endif %}
+
+    <div id="main-wrapper">
+        <header class="top-navbar">
+            <div class="d-flex align-items-center">
+                {% if user.is_authenticated %}
+                <i class="fas fa-bars toggle-sidebar me-3" onclick="toggleSidebar()"></i>
+                {% endif %}
+                <h5 class="mb-0 fw-bold text-dark">{% block page_header %}Dashboard{% endblock %}</h5>
+            </div>
+
+            <div class="d-flex align-items-center">
+                {% if user.is_authenticated %}
+                    <div class="dropdown">
+                        <div class="d-flex align-items-center cursor-pointer" data-bs-toggle="dropdown" style="cursor: pointer;">
+                            <span class="me-2 d-none d-md-block fw-medium">{{ user.username }}</span>
+                            {% if user.profile.avatar %}
+                                <img src="{{ user.profile.avatar.url }}" class="rounded-circle shadow-sm border border-2 border-white" width="35" height="35" style="object-fit: cover;" alt="user">
+                            {% else %}
+                                <img src="https://ui-avatars.com/api/?name={{ user.username }}&background=6366f1&color=fff" class="rounded-circle shadow-sm border border-2 border-white" width="35" height="35" style="object-fit: cover;" alt="user">
+                            {% endif %}
+                        </div>
+                        <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                            <li><a class="dropdown-item" href="{% url 'accounts:profile' %}">Profile Settings</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <form action="{% url 'logout' %}" method="post">
+                                    {% csrf_token %}
+                                    <button type="submit" class="dropdown-item text-danger">Logout</button>
+                                </form>
+                            </li>
+                        </ul>
+                    </div>
+                {% endif %}
+            </div>
+        </header>
+
+        <main class="content-area">
+            <div id="alert-wrapper">
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show border-0 shadow-sm animate__animated animate__slideInDown" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // --- SIDEBAR LOGIC ---
+        function toggleSidebar() {
+            const sidebar = document.getElementById("sidebar");
+            const wrapper = document.getElementById("main-wrapper");
+            const overlay = document.getElementById("sidebar-overlay");
+
+            if (window.innerWidth < 992) {
+                sidebar.classList.toggle("show");
+                overlay.classList.toggle("show");
+            } else {
+                sidebar.classList.toggle("collapsed");
+                wrapper.classList.toggle("full");
+                overlay.classList.remove("show");
+            }
+        }
+
+        // --- ANIMATED ALERT DISMISSAL ---
+        function dismissAlerts() {
+            // Find alerts that are not currently fading out
+            const alerts = document.querySelectorAll('.alert:not(.alert-fade-out)');
+            alerts.forEach(function(alert) {
+                // Auto-dismiss after 5 seconds
+                setTimeout(function() {
+                    // Start the exit animation
+                    alert.classList.add('alert-fade-out');
+                    
+                    // Physically remove from DOM after CSS transition finishes (600ms)
+                    setTimeout(() => {
+                        let bsAlert = bootstrap.Alert.getOrCreateInstance(alert);
+                        if (bsAlert) bsAlert.close();
+                    }, 600);
+                }, 5000);
+            });
+        }
+
+        // --- EXECUTE ON WINDOW LOAD ---
+        window.addEventListener('load', function() {
+            const loader = document.getElementById('loader-wrapper');
+            if (loader) {
+                loader.style.opacity = '0';
+                setTimeout(() => { loader.style.display = 'none'; }, 600);
+            }
+
+            const bar = document.getElementById('nprogress-bar');
+            if (bar) {
+                bar.style.width = '100%';
+                setTimeout(() => { bar.style.opacity = '0'; }, 500);
+            }
+        });
+
+        // --- DOM READY ---
+        $(document).ready(function() {
+            // A. CSRF Setup for AJAX
+            $.ajaxSetup({
+                beforeSend: function(xhr, settings) {
+                    if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !this.crossDomain) {
+                        xhr.setRequestHeader("X-CSRFToken", "{{ csrf_token }}");
+                    }
+                }
+            });
+
+            // B. Initialize Toasts
+            $('.toast').each(function() {
+                let t = new bootstrap.Toast(this, { delay: 5000 });
+                t.show();
+            });
+
+            // C. Start Alert dismissal timer
+            dismissAlerts();
+
+            // D. Re-run dismissal for alerts added via AJAX
+            $(document).ajaxSuccess(function() {
+                dismissAlerts();
+            });
+        });
+    </script>
+</body>
+</html>
