@@ -147,6 +147,23 @@ CACHES = {
         "LOCATION": os.getenv('REDIS_URL'),
     }
 }
+import ssl
+REDIS_URL = os.environ.get("REDIS_URL")
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": REDIS_URL,
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            "CONNECTION_POOL_KWARGS": {
+                "ssl_cert_reqs": ssl.CERT_NONE, # Required for Aiven/Valkey SSL
+            }
+        }
+    }
+}
+
+
+
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
 
@@ -228,6 +245,13 @@ EMAIL_HOST_USER = os.getenv('EMAIL_USER')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_PASS')
 
 # Celery / Memurai Configuration
+
+CELERY_BROKER_USE_SSL = {
+    'ssl_cert_reqs': ssl.CERT_NONE
+}
+CELERY_REDIS_BACKEND_USE_SSL = {
+    'ssl_cert_reqs': ssl.CERT_NONE
+}
 CELERY_BROKER_URL = os.getenv('CELERY_BROKER', 'redis://127.0.0.1:6379/0') # Memurai runs on the Redis port
 CELERY_RESULT_BACKEND = os.getenv('CELERY_BACKEND', 'redis://127.0.0.1:6379/0')
 CELERY_ACCEPT_CONTENT = ['json']
@@ -235,7 +259,14 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 30 * 60 # 30 minutes
-
+CELERY_REDIS_BACKEND_USE_SSL = CELERY_BROKER_USE_SSL
+CELERY_BROKER_TRANSPORT_OPTIONS = {
+    'socket_timeout': 30,
+    'socket_connect_timeout': 30,
+    'retry_on_timeout': True,
+    # This helps prevent "Connection closed by server" during idle periods
+    'socket_keepalive': True, 
+}
 
 
 # settings.py
