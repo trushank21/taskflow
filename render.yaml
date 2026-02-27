@@ -5,15 +5,16 @@ services:
     runtime: python
     plan: free
     buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --no-input && python manage.py migrate"
-    startCommand: "gunicorn taskflow.wsgi:application"
+    startCommand: "gunicorn config.wsgi:application"
     envVars:
       - key: DATABASE_URL
         sync: false # We will paste the Aiven link in the dashboard
       - key: REDIS_URL
-        fromService:
-          type: redis
-          name: taskflow-redis
-          property: connectionString
+        sync: false
+      - key: CELERY_BACKEND
+        sync: false
+      - key: REDIS_URL
+        sync: false
 
   # The Celery Worker
   - type: worker
@@ -21,15 +22,16 @@ services:
     runtime: python
     plan: free
     buildCommand: "pip install -r requirements.txt"
-    startCommand: "celery -A taskflow worker --loglevel=info"
+    startCommand: "celery -A config worker --loglevel=info --pool=solo"
     envVars:
       - key: DATABASE_URL
         sync: false
-      - key: REDIS_URL
-        fromService:
-          type: redis
-          name: taskflow-redis
-          property: connectionString
+      - key: CELERY_BROKER # Add this
+        sync: false
+      - key: CELERY_BACKEND # Add this
+        sync: false
+      - key: REDIS_URL # This is what your CACHES setting uses
+        sync: false
 
   # Redis for Celery
   - type: redis

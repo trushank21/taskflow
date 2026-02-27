@@ -53,6 +53,13 @@ INSTALLED_APPS = [
     'projects',
 ]
 
+CELERY_BROKER_USE_SSL = {
+    'ssl_cert_reqs': 'none'  # Changed from None to 'none' string
+}
+CELERY_REDIS_BACKEND_USE_SSL = {
+    'ssl_cert_reqs': 'none'
+}
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
@@ -227,12 +234,7 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 30 * 60 # 30 minutes
-CELERY_BROKER_USE_SSL = {
-    'ssl_cert_reqs': None
-}
-CELERY_REDIS_BACKEND_USE_SSL = {
-    'ssl_cert_reqs': None
-}
+
 
 
 # settings.py
