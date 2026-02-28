@@ -94,8 +94,8 @@ def dashboard(request):
         # inactive_projs=Count('project', filter=Q(project__status='inactive'), distinct=True),
         overall_progress=Avg('progress')
     )
-    total = stats['actionable_pool_count']
-    completed = stats['completed_tasks']
+    total = stats['actionable_pool_count'] or 0
+    completed = stats['completed_tasks'] or 0
     
     # 3. EFFICIENCY CALCULATION
     # actionable = stats['actionable_pool_count']
@@ -942,14 +942,12 @@ def add_attachment(request, pk):
                 if not uploaded_file:
                     return JsonResponse({'error': 'No file uploaded'}, status=400)
                 
-                original_name = uploaded_file.name
-                attachment.file_name = original_name
+                filename = uploaded_file.name
+                attachment.file_name = filename
 
-                _, extension = os.path.splitext(original_name)
+                import os
+                _, extension = os.path.splitext(filename)
                 ext = extension.lstrip('.').lower()
-
-                
-                        
                 attachment.save()
 
                 
@@ -957,7 +955,7 @@ def add_attachment(request, pk):
                 # extension = attachment.file.url.split('.')[-1].lower()
 
                 # 2. IMPORTANT: Append the extension to the public_id for Cloudinary to handle fl_attachment
-                url, _ = cloudinary_url(
+                download_url, _ = cloudinary_url(
                     f"{attachment.file.public_id}.{ext}", # FIX: Append .extension here
                     resource_type="auto", 
                     flags="attachment",
@@ -968,7 +966,7 @@ def add_attachment(request, pk):
                     return JsonResponse({
                         'id': attachment.id,
                         'file_name': attachment.file_name,
-                        'url': url,
+                        'url': download_url,
                         'user': request.user.username,
                         'extension': ext
                     })
