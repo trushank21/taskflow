@@ -993,27 +993,27 @@ def download_attachment(request, pk):
     attachment = get_object_or_404(TaskAttachment, pk=pk)
 
     try:
-        file_obj = attachment.file
-        if hasattr(file_obj, 'public_id'):
-            public_id = file_obj.public_id
-        else:
-            # Fallback for raw files: use the name but strip the 'media/' prefix if present
-            public_id = file_obj.name.replace('media/', '')
+        file_path = attachment.file.name
+        if file_path.startswith('media/'):
+            file_path = file_path.replace('media/', '', 1)
+            
+            
 
         
         # Generate the URL with the attachment flag on the fly
         url, _ = cloudinary_url(
-            public_id,
+            file_path,
             resource_type='auto',
             flags="attachment",
             attachment=attachment.file_name, # Forces the Save As filename
-            secure=True
+            secure=True,
+            sign_url=True
             )
     
         return HttpResponseRedirect(url)
     except Exception as e:
         # This will help you see the actual error in your Render logs
-        print(f"Download Error: {str(e)}")
+        print(f"CRITICAL DOWNLOAD ERROR [ID {pk}]: {str(e)}")
         return HttpResponse("Error generating download link.", status=500)
 
 @login_required
