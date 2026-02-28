@@ -936,12 +936,19 @@ def add_attachment(request, pk):
                 attachment = form.save(commit=False)
                 attachment.task = task
                 attachment.uploaded_by = request.user
-                attachment.file_name = request.FILES['file'].name
-                attachment.uploaded_by = request.user
-                
+
+                original_file = request.FILES.get('file')
+                if not original_file:
+                    raise ValueError("No file found in request")
+                attachment.file_name =original_file.name
+                        
                 attachment.save()
+
+                import os
+                _, extension = os.path.splitext(attachment.file_name)
+                extension = extension.lstrip('.').lower()
                 # TO THIS (Add the extension logic):
-                extension = attachment.file.url.split('.')[-1].lower()
+                # extension = attachment.file.url.split('.')[-1].lower()
 
                 # 2. IMPORTANT: Append the extension to the public_id for Cloudinary to handle fl_attachment
                 url, _ = cloudinary_url(
