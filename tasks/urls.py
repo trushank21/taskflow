@@ -17,6 +17,7 @@ urlpatterns = [
     path('tasks/<int:pk>/progress/', views.update_progress, name='update_progress'),
     path('task/<int:pk>/attach/', views.add_attachment, name='add_attachment'),
     path('attachment/<int:pk>/delete/', views.delete_attachment, name='delete_attachment'),
+    path('attachment/<int:pk>/download/', views.download_attachment, name='download_attachment'),
     path('tasks/<int:pk>/clear-history/', views.clear_task_history, name='clear_history'),
     # path('update-status/<int:pk>/', views.update_task_status, name='update_task_status'),
 ]

@@ -1,4 +1,4 @@
-from django.http import JsonResponse
+from django.http import HttpResponseRedirect, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
@@ -18,6 +18,7 @@ from django.utils.decorators import method_decorator
 from django.utils.timesince import timesince
 from django.utils import timezone
 from cloudinary.utils import cloudinary_url
+from django.http import HttpResponse
 # --- DASHBOARD VIEW ---
 
 
@@ -966,6 +967,18 @@ def add_attachment(request, pk):
             
     return redirect('tasks:task_detail', pk=pk)
 
+def download_attachment(request, pk):
+    attachment = get_object_or_404(TaskAttachment, pk=pk)
+    
+    # Generate the URL with the attachment flag on the fly
+    url, _ = cloudinary_url(
+        attachment.file.public_id,
+        resource_type="auto",
+        flags="attachment",
+        attachment=attachment.file_name  # Forces the Save As filename
+    )
+    
+    return HttpResponseRedirect(url)
 
 @login_required
 def delete_attachment(request, pk):
