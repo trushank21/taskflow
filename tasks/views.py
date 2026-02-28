@@ -931,31 +931,34 @@ def add_attachment(request, pk):
     if request.method == 'POST':
         form = TaskAttachmentForm(request.POST, request.FILES)
         if form.is_valid():
-            attachment = form.save(commit=False)
-            attachment.task = task
-            attachment.uploaded_by = request.user
-            attachment.file_name = request.FILES['file'].name
-            attachment.uploaded_by = request.user
-            public_id = attachment.file.public_id
-            url, _ = cloudinary_url(
-                public_id,
-                resource_type="raw",
-                flags="attachment",
-                attachment=attachment.file_name
-            )
-            attachment.save()
-            
-            # AJAX Response
-            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                return JsonResponse({
-                    'id': attachment.id,
-                    'file_name': attachment.file_name,
-                    'url': url,
-                    'user': attachment.uploaded_by.username,
-                    'extension': attachment.file.url.lower()
-                })
-            
-            messages.success(request, f'File "{attachment.file_name}" uploaded successfully.')
+            try:
+                attachment = form.save(commit=False)
+                attachment.task = task
+                attachment.uploaded_by = request.user
+                attachment.file_name = request.FILES['file'].name
+                attachment.uploaded_by = request.user
+                
+                attachment.save()
+                url, _ = cloudinary_url(
+                        attachment.file.public_id,
+                        resource_type="auto", 
+                        flags="attachment",
+                        attachment=attachment.file_name 
+                    )
+                # AJAX Response
+                if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        'id': attachment.id,
+                        'file_name': attachment.file_name,
+                        'url': url,
+                        'user': attachment.uploaded_by.username,
+                        'extension': attachment.file.url.lower()
+                    })
+                
+                messages.success(request, f'File "{attachment.file_name}" uploaded successfully.')
+            except Exception as e:
+                print(f"CLOUDINARY UPLOAD ERROR: {str(e)}") 
+                return JsonResponse({'error': f'Upload failed: {str(e)}'}, status=500)
         else:
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
                 return JsonResponse({'error': 'Failed to upload file.'}, status=400)
