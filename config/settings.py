@@ -56,11 +56,13 @@ INSTALLED_APPS = [
 ]
 
 STORAGES = {
-    "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
-    },
     "default": {
         "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+    },
+    "staticfiles": {
+        # Changed from CompressedManifestStaticFilesStorage to just StaticFilesStorage
+        # This prevents the FileNotFoundError during the collectstatic process
+        "BACKEND": "whitenoise.storage.StaticFilesStorage",
     },
 }
 
@@ -74,6 +76,9 @@ CLOUDINARY_STORAGE = {
 
 # ADD THIS LINE for compatibility with django-cloudinary-storage
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
+# Add this to help WhiteNoise ignore the "ghost" files causing the crash
+WHITENOISE_MANIFEST_STRICT = False
 
 CELERY_BROKER_USE_SSL = {
     'ssl_cert_reqs': 'none'  # Changed from None to 'none' string
