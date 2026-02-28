@@ -943,7 +943,7 @@ def add_attachment(request, pk):
                 # TO THIS (Add the extension logic):
                 extension = attachment.file.url.split('.')[-1].lower()
 
-                # Generate the URL with the extension and the attachment flag
+                # Generate the URL by appending the extension to the public_id
                 url, _ = cloudinary_url(
                     f"{attachment.file.public_id}.{extension}", # Append extension here
                     resource_type="auto", 
