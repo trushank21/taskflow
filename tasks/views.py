@@ -940,12 +940,16 @@ def add_attachment(request, pk):
                 attachment.uploaded_by = request.user
                 
                 attachment.save()
+                # TO THIS (Add the extension logic):
+                extension = attachment.file.url.split('.')[-1].lower()
+
+                # Generate the URL with the extension and the attachment flag
                 url, _ = cloudinary_url(
-                        attachment.file.public_id,
-                        resource_type="auto", 
-                        flags="attachment",
-                        attachment=attachment.file_name 
-                    )
+                    f"{attachment.file.public_id}.{extension}", # Append extension here
+                    resource_type="auto", 
+                    flags="attachment",
+                    attachment=attachment.file_name 
+                )
                 # AJAX Response
                 if request.headers.get('x-requested-with') == 'XMLHttpRequest':
                     return JsonResponse({
