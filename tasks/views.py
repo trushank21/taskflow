@@ -938,10 +938,14 @@ def add_attachment(request, pk):
                 attachment.task = task
                 attachment.uploaded_by = request.user
 
-                original_file_name = request.FILES['file'].name
-                attachment.file_name = original_file_name
+                uploaded_file = request.FILES.get('file')
+                if not uploaded_file:
+                    return JsonResponse({'error': 'No file uploaded'}, status=400)
+                
+                original_name = uploaded_file.name
+                attachment.file_name = original_name
 
-                _, extension = os.path.splitext(original_file_name)
+                _, extension = os.path.splitext(original_name)
                 ext = extension.lstrip('.').lower()
 
                 
@@ -965,7 +969,7 @@ def add_attachment(request, pk):
                         'id': attachment.id,
                         'file_name': attachment.file_name,
                         'url': url,
-                        'user': attachment.uploaded_by.username,
+                        'user': request.user.username,
                         'extension': ext
                     })
                 
