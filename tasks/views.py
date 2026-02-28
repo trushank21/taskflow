@@ -966,7 +966,9 @@ def add_attachment(request, pk):
                     f"{attachment.file.public_id}.{ext}", # FIX: Append .extension here
                     resource_type="auto", 
                     flags="attachment",
-                    attachment=attachment.file_name 
+                    attachment=attachment.file_name,
+                    secure=True,
+                    sign_url=True
                 )
                 # AJAX Response
                 if request.headers.get('x-requested-with') == 'XMLHttpRequest':
@@ -993,16 +995,16 @@ def download_attachment(request, pk):
     attachment = get_object_or_404(TaskAttachment, pk=pk)
 
     try:
-        file_path = str(attachment.file)
-        if file_path.startswith('media/'):
-            file_path = file_path.replace('media/', '', 1)
+        public_id = str(attachment.file)
+        if public_id.startswith('media/'):
+            public_id = public_id.replace('media/', '', 1)
             
             
 
         
         # Generate the URL with the attachment flag on the fly
         url, _ = cloudinary_url(
-            file_path,
+            public_id,
             resource_type='auto',
             flags="attachment",
             attachment=attachment.file_name, # Forces the Save As filename
