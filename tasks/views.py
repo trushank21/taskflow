@@ -1048,8 +1048,12 @@ def download_attachment(request, pk):
         # we'll skip the signed-url path entirely.
         public_id = getattr(attachment.file, 'public_id', None)
         if public_id:
+            import os
+            _, ext = os.path.splitext(attachment.file_name)
+            ext = ext.lstrip('.').lower()
+            
             redirect_url, _ = cloudinary_url(
-                public_id,
+                f"{public_id}{ext}",
                 resource_type='auto',
                 flags="attachment",
                 attachment=attachment.file_name,
