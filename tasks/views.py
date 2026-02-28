@@ -993,14 +993,22 @@ def download_attachment(request, pk):
     attachment = get_object_or_404(TaskAttachment, pk=pk)
 
     try:
-        public_id = getattr(attachment.file, 'public_id', attachment.file.name)
+        file_obj = attachment.file
+        if hasattr(file_obj, 'public_id'):
+            public_id = file_obj.public_id
+        else:
+            # Fallback for raw files: use the name but strip the 'media/' prefix if present
+            public_id = file_obj.name.replace('media/', '')
+
+        
         # Generate the URL with the attachment flag on the fly
         url, _ = cloudinary_url(
             public_id,
             resource_type='auto',
             flags="attachment",
-            attachment=attachment.file_name  # Forces the Save As filename
-        )
+            attachment=attachment.file_name, # Forces the Save As filename
+            secure=True
+            )
     
         return HttpResponseRedirect(url)
     except Exception as e:
