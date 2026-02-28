@@ -17,6 +17,7 @@ from django.views.decorators.cache import never_cache
 from django.utils.decorators import method_decorator
 from django.utils.timesince import timesince
 from django.utils import timezone
+from cloudinary.utils import cloudinary_url
 # --- DASHBOARD VIEW ---
 
 
@@ -915,8 +916,10 @@ def update_progress(request, pk):
 
 @login_required
 def add_attachment(request, pk):
-    # sourcery skip: merge-else-if-into-elif, reintroduce-else
+    # sourcery skip: merge-else-if-into-elif, reintroduce-else, use-fstring-for-concatenation
     task = get_object_or_404(Task, pk=pk)
+    
+
     
     # Check if project is inactive
     if task.project.status == 'inactive':
@@ -933,6 +936,13 @@ def add_attachment(request, pk):
             attachment.uploaded_by = request.user
             attachment.file_name = request.FILES['file'].name
             attachment.uploaded_by = request.user
+            public_id = attachment.file.public_id
+            url, _ = cloudinary_url(
+                public_id,
+                resource_type="raw",
+                flags="attachment",
+                attachment=attachment.file_name
+            )
             attachment.save()
             
             # AJAX Response
@@ -940,7 +950,7 @@ def add_attachment(request, pk):
                 return JsonResponse({
                     'id': attachment.id,
                     'file_name': attachment.file_name,
-                    'url': attachment.file.url + "?fl_attachment",
+                    'url': url,
                     'user': attachment.uploaded_by.username,
                     'extension': attachment.file.url.lower()
                 })

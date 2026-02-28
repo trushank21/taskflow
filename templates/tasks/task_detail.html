@@ -296,7 +296,7 @@
                             <button class="btn p-1 text-muted border-0 bg-transparent view-file-btn" data-url="{{ attachment.file.url }}" data-name="{{ attachment.file_name }}">
                                 <i class="fas fa-eye small"></i>
                             </button>
-                            <a href="{{ attachment.file.url }}" download class="text-muted p-1"><i class="fas fa-download small"></i></a>
+                            <a href="{{ attachment.file.url }}" download="{{ attachment.file_name }}" class="text-muted p-1"><i class="fas fa-download small"></i></a>
                             {% if not is_locked and request.user.profile.role != 'observer' %}
                                 {% if request.user == attachment.uploaded_by or request.user.profile.role in 'admin,manager' or task.project.team_lead == request.user %}
                             <button type="button" class="btn p-1 text-danger border-0 bg-transparent delete-attachment-btn"  data-id="{{ attachment.pk }}">
