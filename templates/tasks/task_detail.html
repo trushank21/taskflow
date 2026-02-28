@@ -299,7 +299,7 @@
                             <a href="{{ attachment.file.url }}" download class="text-muted p-1"><i class="fas fa-download small"></i></a>
                             {% if not is_locked and request.user.profile.role != 'observer' %}
                                 {% if request.user == attachment.uploaded_by or request.user.profile.role in 'admin,manager' or task.project.team_lead == request.user %}
-                            <button type="button" class="btn p-1 text-danger border-0 bg-transparent delete-attachment-btn" data-id="{{ attachment.pk }}">
+                            <button type="button" class="btn p-1 text-danger border-0 bg-transparent delete-attachment-btn"  data-id="{{ attachment.pk }}">
                                 <i class="fas fa-trash-alt small"></i>
                             </button>
                                 {% endif %}
@@ -618,8 +618,16 @@ $(document).on('hidden.bs.modal', '.modal', function () {
                 contentType: false,
                 headers: {'X-Requested-With': 'XMLHttpRequest'},
                 success: function(res) {
-                    const iconClass = (res.extension.includes('pdf')) ? 'fa-file-pdf text-danger' : 
-                                      (['jpg','jpeg','png','gif'].some(ext => res.extension.includes(ext))) ? 'fa-file-image text-success' : 'fa-file-alt text-primary';
+                    const url = res.url;
+                    const extension = url.split('.').pop().toLowerCase();
+                    let iconClass = 'fa-file-alt text-primary';
+                    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension)) {
+                        iconClass = 'fa-file-image text-success';
+                    } else if (extension === 'pdf') {
+                        iconClass = 'fa-file-pdf text-danger';
+                    }
+                    //const iconClass = (res.extension.includes('pdf')) ? 'fa-file-pdf text-danger' : 
+                      //                (['jpg','jpeg','png','gif'].some(ext => res.extension.includes(ext))) ? 'fa-file-image text-success' : 'fa-file-alt text-primary';
                     
                     const newHtml = `
                         <div id="attachment-row-${res.id}" class="p-2 border rounded-3 mb-2 d-flex align-items-center bg-light-hover transition-all position-relative attachment-row animate__animated animate__fadeInDown">
@@ -629,8 +637,8 @@ $(document).on('hidden.bs.modal', '.modal', function () {
                                 <small class="text-muted" style="font-size: 10px;">By ${res.user}</small>
                             </div>
                             <div class="d-flex gap-2 ms-2" style="position: relative; z-index: 2;">
-                                <button class="btn p-1 text-muted border-0 bg-transparent view-file-btn" data-url="${res.url}" data-name="${res.file_name}"><i class="fas fa-eye small"></i></button>
-                                <a href="${res.url}" download class="text-muted p-1"><i class="fas fa-download small"></i></a>
+                                <button class="btn p-1 text-muted border-0 bg-transparent view-file-btn" data-url="${url}" data-name="${res.file_name}"><i class="fas fa-eye small"></i></button>
+                                <a href="${url}" download class="text-muted p-1"><i class="fas fa-download small"></i></a>
                                 <button type="button" class="btn p-1 text-danger border-0 bg-transparent delete-attachment-btn" data-id="${res.id}"><i class="fas fa-trash-alt small"></i></button>
                             </div>
                         </div>`;

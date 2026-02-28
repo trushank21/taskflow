@@ -930,6 +930,7 @@ def add_attachment(request, pk):
         if form.is_valid():
             attachment = form.save(commit=False)
             attachment.task = task
+            attachment.uploaded_by = request.user
             attachment.file_name = request.FILES['file'].name
             attachment.uploaded_by = request.user
             attachment.save()
