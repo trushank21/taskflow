@@ -61,6 +61,18 @@ CLOUDINARY_STORAGE = {
     'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET'),
 }
 
+STORAGES = {
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+    "default": {
+        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+    },
+}
+
+# ADD THIS LINE for compatibility with django-cloudinary-storage
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
 CELERY_BROKER_USE_SSL = {
     'ssl_cert_reqs': 'none'  # Changed from None to 'none' string
 }
