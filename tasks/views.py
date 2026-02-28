@@ -940,7 +940,7 @@ def add_attachment(request, pk):
                 return JsonResponse({
                     'id': attachment.id,
                     'file_name': attachment.file_name,
-                    'url': attachment.file.url,
+                    'url': attachment.file.url + "?fl_attachment",
                     'user': attachment.uploaded_by.username,
                     'extension': attachment.file.url.lower()
                 })
