@@ -60,12 +60,10 @@ STORAGES = {
         "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
     },
     "staticfiles": {
-        # Changed from CompressedManifestStaticFilesStorage to just StaticFilesStorage
-        # This prevents the FileNotFoundError during the collectstatic process
-        "BACKEND": "whitenoise.storage.StaticFilesStorage",
+        "BACKEND": "whitenoise.storage.ManifestStaticFilesStorage",
     },
 }
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
 
 
 # Add this to help WhiteNoise ignore the "ghost" files causing the crash
