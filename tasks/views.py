@@ -20,8 +20,15 @@ from django.utils import timezone
 from cloudinary.utils import cloudinary_url
 from django.http import HttpResponse
 import os
-# --- DASHBOARD VIEW ---
+import cloudinary
 
+
+cloudinary.config(
+    cloud_name = os.getenv('CLOUDINARY_CLOUD_NAME'),
+    api_key = os.getenv('CLOUDINARY_API_KEY'),
+    api_secret = os.getenv('CLOUDINARY_API_SECRET'),
+    secure = True
+)
 
 from django.template.loader import render_to_string
 from django.http import JsonResponse
@@ -985,24 +992,21 @@ def add_attachment(request, pk):
 def download_attachment(request, pk):
     attachment = get_object_or_404(TaskAttachment, pk=pk)
 
-    # file_url = attachment.file.url.lower()
-    # if any(ext in file_url for ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp']):
-    #     res_type = "image"
-    # else:
-    #     res_type = "raw"
-
-
-    _, extension = os.path.splitext(attachment.file.name)
-    ext = extension.lstrip('.').lower()
-    # Generate the URL with the attachment flag on the fly
-    url, _ = cloudinary_url(
-       attachment.file.name,
-        resource_type='auto',
-        flags="attachment",
-        attachment=attachment.file_name  # Forces the Save As filename
-    )
+    try:
+        public_id = getattr(attachment.file, 'public_id', attachment.file.name)
+        # Generate the URL with the attachment flag on the fly
+        url, _ = cloudinary_url(
+            public_id,
+            resource_type='auto',
+            flags="attachment",
+            attachment=attachment.file_name  # Forces the Save As filename
+        )
     
-    return HttpResponseRedirect(url)
+        return HttpResponseRedirect(url)
+    except Exception as e:
+        # This will help you see the actual error in your Render logs
+        print(f"Download Error: {str(e)}")
+        return HttpResponse("Error generating download link.", status=500)
 
 @login_required
 def delete_attachment(request, pk):
