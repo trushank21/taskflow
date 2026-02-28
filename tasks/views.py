@@ -1014,7 +1014,7 @@ def download_attachment(request, pk):
     except Exception as e:
         # This will help you see the actual error in your Render logs
         print(f"CRITICAL DOWNLOAD ERROR [ID {pk}]: {str(e)}")
-        return HttpResponse("Error generating download link.", status=500)
+        return HttpResponseRedirect("Error generating download link.", status=500)
 
 @login_required
 def delete_attachment(request, pk):
