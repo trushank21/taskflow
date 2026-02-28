@@ -943,9 +943,9 @@ def add_attachment(request, pk):
                 # TO THIS (Add the extension logic):
                 extension = attachment.file.url.split('.')[-1].lower()
 
-                # Generate the URL by appending the extension to the public_id
+                # 2. IMPORTANT: Append the extension to the public_id for Cloudinary to handle fl_attachment
                 url, _ = cloudinary_url(
-                    f"{attachment.file.public_id}.{extension}", # Append extension here
+                    f"{attachment.file.public_id}.{extension}", # FIX: Append .extension here
                     resource_type="auto", 
                     flags="attachment",
                     attachment=attachment.file_name 
@@ -957,7 +957,7 @@ def add_attachment(request, pk):
                         'file_name': attachment.file_name,
                         'url': url,
                         'user': attachment.uploaded_by.username,
-                        'extension': attachment.file.url.lower()
+                        'extension': extension
                     })
                 
                 messages.success(request, f'File "{attachment.file_name}" uploaded successfully.')

@@ -619,7 +619,8 @@ $(document).on('hidden.bs.modal', '.modal', function () {
                 headers: {'X-Requested-With': 'XMLHttpRequest'},
                 success: function(res) {
                     const url = res.url;
-                    const extension = url.split('.').pop().toLowerCase();
+                    //const extension = url.split('.').pop().toLowerCase();
+                    const extension = res.extension;
                     let iconClass = 'fa-file-alt text-primary';
                     if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension)) {
                         iconClass = 'fa-file-image text-success';
