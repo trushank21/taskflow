@@ -64,6 +64,7 @@ STORAGES = {
     },
 }
 
+STATICFILES_STORAGE = "whitenoise.storage.ManifestStaticFilesStorage"
 
 
 # Add this to help WhiteNoise ignore the "ghost" files causing the crash
