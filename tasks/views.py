@@ -984,11 +984,20 @@ def add_attachment(request, pk):
 
 def download_attachment(request, pk):
     attachment = get_object_or_404(TaskAttachment, pk=pk)
-    
+
+    # file_url = attachment.file.url.lower()
+    # if any(ext in file_url for ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp']):
+    #     res_type = "image"
+    # else:
+    #     res_type = "raw"
+
+
+    _, extension = os.path.splitext(attachment.file.name)
+    ext = extension.lstrip('.').lower()
     # Generate the URL with the attachment flag on the fly
     url, _ = cloudinary_url(
-        attachment.file.public_id,
-        resource_type="auto",
+       attachment.file.name,
+        resource_type='auto',
         flags="attachment",
         attachment=attachment.file_name  # Forces the Save As filename
     )

@@ -296,7 +296,7 @@
                             <button class="btn p-1 text-muted border-0 bg-transparent view-file-btn" data-url="{{ attachment.file.url }}" data-name="{{ attachment.file_name }}">
                                 <i class="fas fa-eye small"></i>
                             </button>
-                            <a href="{% url "tasks:download_attachment" attachment.pk %}" download="{{ attachment.file_name }}" class="text-muted p-1"><i class="fas fa-download small"></i></a>
+                            <a href="{% url "tasks:download_attachment" attachment.pk %}"  class="text-muted p-1"><i class="fas fa-download small"></i></a>
                             {% if not is_locked and request.user.profile.role != 'observer' %}
                                 {% if request.user == attachment.uploaded_by or request.user.profile.role in 'admin,manager' or task.project.team_lead == request.user %}
                             <button type="button" class="btn p-1 text-danger border-0 bg-transparent delete-attachment-btn"  data-id="{{ attachment.pk }}">
@@ -619,6 +619,7 @@ $(document).on('hidden.bs.modal', '.modal', function () {
                 headers: {'X-Requested-With': 'XMLHttpRequest'},
                 success: function(res) {
                     const url = res.url;
+                    const downloadRoute = `/attachment/${res.id}/download/`;
                     //const extension = url.split('.').pop().toLowerCase();
                     const extension = res.extension;
                     let iconClass = 'fa-file-alt text-primary';
@@ -639,7 +640,7 @@ $(document).on('hidden.bs.modal', '.modal', function () {
                             </div>
                             <div class="d-flex gap-2 ms-2" style="position: relative; z-index: 2;">
                                 <button class="btn p-1 text-muted border-0 bg-transparent view-file-btn" data-url="${url}" data-name="${res.file_name}"><i class="fas fa-eye small"></i></button>
-                                <a href="${res.url}"  class="text-muted p-1"><i class="fas fa-download small"></i></a>
+                                <a href="${downloadRoute}"  class="text-muted p-1"><i class="fas fa-download small"></i></a>
                                 <button type="button" class="btn p-1 text-danger border-0 bg-transparent delete-attachment-btn" data-id="${res.id}"><i class="fas fa-trash-alt small"></i></button>
                             </div>
                         </div>`;
