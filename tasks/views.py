@@ -993,7 +993,7 @@ def download_attachment(request, pk):
     attachment = get_object_or_404(TaskAttachment, pk=pk)
 
     try:
-        file_path = str(attachment.file.name)
+        file_path = str(attachment.file)
         if file_path.startswith('media/'):
             file_path = file_path.replace('media/', '', 1)
             
