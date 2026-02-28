@@ -4,6 +4,8 @@ from django.urls import reverse
 from projects.models import Project
 from tasks.models import Task, TaskHistory
 
+from unittest.mock import patch
+
 
 class BaseTaskTestCase(TestCase):
 
@@ -33,7 +35,8 @@ class BaseTaskTestCase(TestCase):
         self.project = Project.objects.create(
             title="Test Project",
             status="active",
-            team_lead=self.manager
+            team_lead=self.manager,
+            created_by=self.admin,
         )
         self.project.team_members.add(self.developer)
 
@@ -161,6 +164,20 @@ from tasks.models import TaskAttachment
 
 class AttachmentTests(BaseTaskTestCase):
 
+    def setUp(self):
+        super().setUp()
+        # prevent Cloudinary from attempting to upload during tests; return a
+        # minimal dummy response so ``public_id`` is available.
+        self._upload_patcher = patch('cloudinary.uploader.upload',
+                                     return_value={
+                                         'public_id': 'dummy',
+                                         'url': 'http://example.com',
+                                         'secure_url': 'https://example.com',
+                                         'version': 1,
+                                     })
+        self._upload_patcher.start()
+        self.addCleanup(self._upload_patcher.stop)
+
     def test_only_uploader_can_delete(self):
         file = SimpleUploadedFile("test.txt", b"file content")
 
@@ -178,3 +195,40 @@ class AttachmentTests(BaseTaskTestCase):
         )
 
         self.assertEqual(response.status_code, 403)
+
+    def test_download_uses_signed_url_when_available(self):
+        file = SimpleUploadedFile("foo.txt", b"content")
+        attachment = TaskAttachment.objects.create(
+            task=self.task,
+            uploaded_by=self.developer,
+            file=file,
+            file_name="foo.txt",
+        )
+
+        self.client.login(username='dev', password='pass')
+
+        with patch('tasks.views.cloudinary_url') as mock_url:
+            mock_url.return_value = ("https://example.com/download", None)
+            resp = self.client.get(reverse('tasks:download_attachment', args=[attachment.pk]))
+
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(resp['Location'], "https://example.com/download")
+        mock_url.assert_called_once()
+
+    def test_download_falls_back_to_direct_url_if_cloudinary_fails(self):
+        file = SimpleUploadedFile("bar.txt", b"foobar")
+        attachment = TaskAttachment.objects.create(
+            task=self.task,
+            uploaded_by=self.developer,
+            file=file,
+            file_name="bar.txt",
+        )
+
+        self.client.login(username='dev', password='pass')
+
+        with patch('tasks.views.cloudinary_url', side_effect=Exception("oops")):
+            resp = self.client.get(reverse('tasks:download_attachment', args=[attachment.pk]))
+
+        self.assertEqual(resp.status_code, 302)
+        # direct storage url should be returned when cloudinary_url fails
+        self.assertTrue(resp['Location'].endswith('/media/task_attachments/bar.txt'))

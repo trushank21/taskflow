@@ -991,32 +991,76 @@ def add_attachment(request, pk):
             
     return redirect('tasks:task_detail', pk=pk)
 
-def download_attachment(request, pk):
-    attachment = get_object_or_404(TaskAttachment, pk=pk)
+# def download_attachment(request, pk):
+#     attachment = get_object_or_404(TaskAttachment, pk=pk)
 
-    try:
-        public_id = str(attachment.file)
-        if public_id.startswith('media/'):
-            public_id = public_id.replace('media/', '', 1)
+#     try:
+#         public_id = str(attachment.file)
+#         if public_id.startswith('media/'):
+#             public_id = public_id.replace('media/', '', 1)
             
             
 
         
-        # Generate the URL with the attachment flag on the fly
-        url, _ = cloudinary_url(
-            public_id,
-            resource_type='auto',
-            flags="attachment",
-            attachment=attachment.file_name, # Forces the Save As filename
-            secure=True,
-            sign_url=True
-            )
+#         # Generate the URL with the attachment flag on the fly
+#         url, _ = cloudinary_url(
+#             public_id,
+#             resource_type='auto',
+#             flags="attachment",
+#             attachment=attachment.file_name, # Forces the Save As filename
+#             secure=True,
+#             sign_url=True
+#             )
     
-        return HttpResponseRedirect(url)
+#         return HttpResponseRedirect(url)
+#     except Exception as e:
+#         # This will help you see the actual error in your Render logs
+#         print(f"CRITICAL DOWNLOAD ERROR [ID {pk}]: {str(e)}")
+#         return HttpResponseRedirect("Error generating download link.", status=500)
+
+
+def download_attachment(request, pk):
+    """Redirect to a signed download link for an attachment.
+
+    For files stored in Cloudinary we rely on the resource's
+    ``public_id`` so we don't accidentally feed Cloudinary a full URL
+    (which will result in a 400 from their API).  On some environments
+    (Render in particular) ``str(attachment.file)`` may already be a
+    full URL, causing the old implementation to break and the user to
+    see a 400 response.
+
+    We try to build a signed URL via :func:`cloudinary_url` and fall
+    back to the raw ``file.url`` if anything goes wrong (or the field
+    doesn't expose ``public_id`` at all).
+    """
+
+    attachment = get_object_or_404(TaskAttachment, pk=pk)
+
+    # start with the default redirect; replaced below when we can build a
+    # better link.  ``attachment.file.url`` will work with either local
+    # storage or Cloudinary, but doesn't set the attachment header.
+    redirect_url = attachment.file.url
+
+    try:
+        # ``CloudinaryResource`` exposes ``public_id`` directly which is
+        # always safe to pass to ``cloudinary_url``.  If the attribute is
+        # missing (for example when running tests with SimpleUploadedFile)
+        # we'll skip the signed-url path entirely.
+        public_id = getattr(attachment.file, 'public_id', None)
+        if public_id:
+            redirect_url, _ = cloudinary_url(
+                public_id,
+                resource_type='auto',
+                flags="attachment",
+                attachment=attachment.file_name,
+                secure=True,
+                sign_url=True,
+            )
     except Exception as e:
-        # This will help you see the actual error in your Render logs
-        print(f"CRITICAL DOWNLOAD ERROR [ID {pk}]: {str(e)}")
-        return HttpResponseRedirect("Error generating download link.", status=500)
+        # log the error for Render logs and continue with the basic url.
+        print(f"CRITICAL DOWNLOAD ERROR [ID {pk}]: {e}")
+
+    return HttpResponseRedirect(redirect_url)
 
 @login_required
 def delete_attachment(request, pk):
