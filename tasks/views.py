@@ -19,6 +19,7 @@ from django.utils.timesince import timesince
 from django.utils import timezone
 from cloudinary.utils import cloudinary_url
 from django.http import HttpResponse
+import os
 # --- DASHBOARD VIEW ---
 
 
@@ -937,22 +938,23 @@ def add_attachment(request, pk):
                 attachment.task = task
                 attachment.uploaded_by = request.user
 
-                original_file = request.FILES.get('file')
-                if not original_file:
-                    raise ValueError("No file found in request")
-                attachment.file_name =original_file.name
+                original_file_name = request.FILES['file'].name
+                attachment.file_name = original_file_name
+
+                _, extension = os.path.splitext(original_file_name)
+                ext = extension.lstrip('.').lower()
+
+                
                         
                 attachment.save()
 
-                import os
-                _, extension = os.path.splitext(attachment.file_name)
-                extension = extension.lstrip('.').lower()
+                
                 # TO THIS (Add the extension logic):
                 # extension = attachment.file.url.split('.')[-1].lower()
 
                 # 2. IMPORTANT: Append the extension to the public_id for Cloudinary to handle fl_attachment
                 url, _ = cloudinary_url(
-                    f"{attachment.file.public_id}.{extension}", # FIX: Append .extension here
+                    f"{attachment.file.public_id}.{ext}", # FIX: Append .extension here
                     resource_type="auto", 
                     flags="attachment",
                     attachment=attachment.file_name 
@@ -964,7 +966,7 @@ def add_attachment(request, pk):
                         'file_name': attachment.file_name,
                         'url': url,
                         'user': attachment.uploaded_by.username,
-                        'extension': extension
+                        'extension': ext
                     })
                 
                 messages.success(request, f'File "{attachment.file_name}" uploaded successfully.')
