@@ -1022,7 +1022,7 @@ def add_attachment(request, pk):
 def download_attachment(request, pk):
     
     attachment = get_object_or_404(TaskAttachment, pk=pk)
-    redirect_url = attachment.file.url
+    
 
     try:
         # ``CloudinaryResource`` exposes ``public_id`` directly which is
@@ -1030,15 +1030,12 @@ def download_attachment(request, pk):
         # missing (for example when running tests with SimpleUploadedFile)
         # we'll skip the signed-url path entirely.
         public_id = getattr(attachment.file, 'public_id', None)
-        if public_id:
-            import os
-            _, ext = os.path.splitext(attachment.file_name) 
-            ext = ext.lower()
-            resource_handle = f"{public_id}{ext}" if not public_id.endswith(ext) else public_id
+        resource_type = attachment.file.resource_type
+       
             
-            redirect_url, _ = cloudinary_url(
-                resource_handle,
-                resource_type='auto',
+        redirect_url, _ = cloudinary_url(
+                public_id,
+                resource_type=resource_type,
                 flags="attachment",
                 attachment=attachment.file_name,
                 secure=True,
