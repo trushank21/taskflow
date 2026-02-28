@@ -1020,25 +1020,8 @@ def add_attachment(request, pk):
 
 
 def download_attachment(request, pk):
-    """Redirect to a signed download link for an attachment.
-
-    For files stored in Cloudinary we rely on the resource's
-    ``public_id`` so we don't accidentally feed Cloudinary a full URL
-    (which will result in a 400 from their API).  On some environments
-    (Render in particular) ``str(attachment.file)`` may already be a
-    full URL, causing the old implementation to break and the user to
-    see a 400 response.
-
-    We try to build a signed URL via :func:`cloudinary_url` and fall
-    back to the raw ``file.url`` if anything goes wrong (or the field
-    doesn't expose ``public_id`` at all).
-    """
-
+    
     attachment = get_object_or_404(TaskAttachment, pk=pk)
-
-    # start with the default redirect; replaced below when we can build a
-    # better link.  ``attachment.file.url`` will work with either local
-    # storage or Cloudinary, but doesn't set the attachment header.
     redirect_url = attachment.file.url
 
     try:
@@ -1049,11 +1032,12 @@ def download_attachment(request, pk):
         public_id = getattr(attachment.file, 'public_id', None)
         if public_id:
             import os
-            _, ext = os.path.splitext(attachment.file_name)
-            ext = ext.lstrip('.').lower()
+            _, ext = os.path.splitext(attachment.file_name) 
+            ext = ext.lower()
+            resource_handle = f"{public_id}{ext}" if not public_id.endswith(ext) else public_id
             
             redirect_url, _ = cloudinary_url(
-                f"{public_id}{ext}",
+                resource_handle,
                 resource_type='auto',
                 flags="attachment",
                 attachment=attachment.file_name,

@@ -236,16 +236,16 @@ class AttachmentTests(BaseTaskTestCase):
 
         with patch('tasks.views.cloudinary_url', side_effect=Exception("oops")):
             # We don't follow the external redirect to Cloudinary because the
-        # test client will then land on a 404 from the fake URL.  Instead we
-        # examine the ``Location`` header returned directly from our view.
-        download_url = reverse('tasks:download_attachment', args=[attachment.pk])
-        resp = self.client.get(download_url, follow=False)
+            # test client will then land on a 404 from the fake URL.  Instead we
+            # examine the ``Location`` header returned directly from our view.
+            download_url = reverse('tasks:download_attachment', args=[attachment.pk])
+            resp = self.client.get(download_url, follow=False)
 
-        # the middleware may issue a 301 if the trailing slash was dropped;
-        # chase that first step if needed.
-        if resp.status_code == 301:
-            resp = self.client.get(resp['Location'], follow=False)
+            # the middleware may issue a 301 if the trailing slash was dropped;
+            # chase that first step if needed.
+            if resp.status_code == 301:
+                resp = self.client.get(resp['Location'], follow=False)
 
-        self.assertIn(resp.status_code, (301, 302))
-        # final redirect target should equal whatever the storage backend says
-        self.assertEqual(resp['Location'], attachment.file.url)
+            self.assertIn(resp.status_code, (301, 302))
+            # final redirect target should equal whatever the storage backend says
+            self.assertEqual(resp['Location'], attachment.file.url)
