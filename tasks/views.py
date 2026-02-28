@@ -915,6 +915,7 @@ def update_progress(request, pk):
 
 @login_required
 def add_attachment(request, pk):
+    # sourcery skip: merge-else-if-into-elif, reintroduce-else
     task = get_object_or_404(Task, pk=pk)
     
     # Check if project is inactive
@@ -929,6 +930,7 @@ def add_attachment(request, pk):
         if form.is_valid():
             attachment = form.save(commit=False)
             attachment.task = task
+            attachment.file_name = request.FILES['file'].name
             attachment.uploaded_by = request.user
             attachment.save()
             

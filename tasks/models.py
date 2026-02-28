@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from projects.models import Project
+from cloudinary.models import CloudinaryField
 
 class Task(models.Model):
     """Main Task model"""
@@ -101,7 +102,8 @@ class TaskAttachment(models.Model):
     """File attachments for tasks"""
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='attachments')
     uploaded_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='task_attachments')
-    file = models.FileField(upload_to='task_attachments/')
+    # file = models.FileField(upload_to='task_attachments/')
+    file = CloudinaryField('resource', folder='task_attachments/')
     file_name = models.CharField(max_length=255)
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
