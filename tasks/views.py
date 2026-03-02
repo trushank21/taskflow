@@ -384,12 +384,22 @@ class TaskDetailView(LoginRequiredMixin, DetailView):
     context_object_name = 'task'
 
     def get_queryset(self):
+        user = self.request.user
         # Use prefetch_related for the related sets to avoid N+1 queries
-        return super().get_queryset().prefetch_related(
+        qs=super().get_queryset().prefetch_related(
             'comments__commented_by', 
             'attachments__uploaded_by',
             'history__changed_by'
         )
+        if user.profile.role in ['admin', 'manager']:
+            return qs
+            
+        return qs.filter(
+            Q(assigned_to=user) | 
+            Q(assigned_by=user) | 
+            Q(project__team_lead=user) | 
+            Q(project__team_members=user)
+        ).distinct()
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -679,7 +689,7 @@ class TaskUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
 
 
 
-class TaskDeleteView(LoginRequiredMixin, DeleteView):
+class TaskDeleteView(LoginRequiredMixin,UserPassesTestMixin, DeleteView):
     model = Task
     template_name = 'tasks/task_confirm_delete.html'
     success_url = reverse_lazy('tasks:task_list')
@@ -763,6 +773,9 @@ def delete_comment(request, pk):
 def update_task_status(request, pk):
     task = get_object_or_404(Task, pk=pk)
     user = request.user
+
+    if user.profile.role == 'observer':
+        return JsonResponse({'status': 'error', 'message': 'Observers cannot modify tasks.'}, status=403)
 
     is_authorized = (
         user.profile.role in ['admin', 'manager'] or 
@@ -1022,6 +1035,18 @@ def add_attachment(request, pk):
 def download_attachment(request, pk):
     
     attachment = get_object_or_404(TaskAttachment, pk=pk)
+    task = attachment.task
+    user = request.user
+
+    can_view = (
+        user.profile.role in ['admin', 'manager', 'observer'] or 
+        task.project.team_lead == user or 
+        task.project.team_members.filter(id=user.id).exists()
+    )
+
+    if not can_view:
+        messages.error(request, "Access denied.")
+        return redirect('tasks:task_list')
     
 
     try:
