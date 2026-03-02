@@ -245,8 +245,12 @@
                     <div class="col-6 border-end">
                         <label class="tiny-label text-muted d-block mb-1">Assignee</label>
                         <div class="d-flex align-items-center">
+                            {% if task.assigned_to %}
                             <img src="https://ui-avatars.com/api/?name={{ task.assigned_to.username }}&background=6366f1&color=fff" class="rounded-circle me-2" width="24" height="24">
                             <span class="fw-bold text-dark small">{{ task.assigned_to.username }}</span>
+                            {% else %}
+                                <span class="text-muted small italic">Unassigned</span>
+                            {% endif %}
                         </div>
                     </div>
                     
