@@ -127,9 +127,11 @@
                             <span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span>
                         </div>
                     </div>
+                    {% if request.user.profile.role != 'observer' %}
                     <div class="col-4 col-md-2 text-end">
                         <button id="btn-save-progress-ajax" data-id="{{ task.pk }}" class="btn btn-primary-custom w-100 btn-sm fw-bold shadow-sm rounded-3 py-2">Set</button>
                     </div>
+                    {% endif %}
                 </div>
                 {% endif %}
             </div>
