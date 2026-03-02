@@ -64,7 +64,9 @@ STORAGES = {
     },
 }
 
-STATICFILES_STORAGE = "whitenoise.storage.ManifestStaticFilesStorage"
+# STATICFILES_STORAGE = "whitenoise.storage.ManifestStaticFilesStorage"
+# Add compression and caching support
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 
 # Add this to help WhiteNoise ignore the "ghost" files causing the crash
