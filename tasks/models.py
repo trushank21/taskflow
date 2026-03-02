@@ -130,14 +130,12 @@ class TaskHistory(models.Model):
 def delete_cloudinary_file(sender, instance, **kwargs):
     if instance.file:
         try:
+            # CloudinaryField stores the reference; we get the public_id from it
             public_id = getattr(instance.file, 'public_id', None)
             r_type = getattr(instance.file, 'resource_type', 'image')
             if public_id:
                 cloudinary.uploader.destroy(public_id, resource_type=r_type)
         except Exception as e:
-            print(f"Error deleting from Cloudinary: {e}")
-
-    def __str__(self):
-        return f"{self.task.title}: {self.old_status} -> {self.new_status}"
+            print(f"Error deleting from Cloudinary: {e}"
 
 
