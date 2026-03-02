@@ -120,7 +120,7 @@
                     </div>
                 </div>
                 
-                {% if not is_locked and task.assigned_to == request.user and request.user.profile.role != 'observer' %}
+                {% if not is_locked and task.assigned_to == request.user or request.user.profile.role == 'admin' or request.user.profile.role == 'manager' %}
                 <div class="row g-2 align-items-center">
                     
                     <div class="col-8 col-md-10">
