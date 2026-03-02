@@ -2,7 +2,7 @@ from django.http import HttpResponseRedirect, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.tasks import task
+# from django.tasks import task
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.db.models import Q, Count,Avg
 from django.contrib import messages
@@ -413,6 +413,7 @@ class TaskDetailView(LoginRequiredMixin, DetailView):
         context['comment_form'] = TaskCommentForm()
         # Pass the attachment form to the template
         context['attachment_form'] = TaskAttachmentForm() 
+        # context['history'] = self.object.history.all().order_by('-changed_at')
         return context
 
 # --- TASK CREATE/UPDATE/DELETE ---
@@ -1076,9 +1077,12 @@ def download_attachment(request, pk):
                 secure=True,
                 sign_url=True,
             )
+        return HttpResponseRedirect(redirect_url)
     except Exception as e:
         # log the error for Render logs and continue with the basic url.
         print(f"CRITICAL DOWNLOAD ERROR [ID {pk}]: {e}")
+         messages.error(request, "Download failed.")
+        return redirect('tasks:task_detail', pk=task.pk)
 
     return HttpResponseRedirect(redirect_url)
 
