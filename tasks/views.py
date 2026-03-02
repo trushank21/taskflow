@@ -384,13 +384,14 @@ class TaskDetailView(LoginRequiredMixin, DetailView):
     context_object_name = 'task'
 
     def get_queryset(self):
-        user = self.request.user
         # Use prefetch_related for the related sets to avoid N+1 queries
-        qs=super().get_queryset().prefetch_related(
-            'comments__commented_by', 
+        qs = Task.objects.select_related('project', 'assigned_to')
+        qs = qs.prefetch_related(
+            'comments__commented_by',
             'attachments__uploaded_by',
             'history__changed_by'
         )
+        user = self.request.user
         if user.profile.role in ['admin', 'manager','observer']:
             return qs
         
@@ -404,7 +405,11 @@ class TaskDetailView(LoginRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['is_locked'] = self.object.project.status == 'inactive'
+        # context['is_locked'] = self.object.project.status == 'inactive'
+        if self.object.project:
+            context['is_locked'] = self.object.project.status == 'inactive'
+        else:
+            context['is_locked'] = False
         # context['comments'] = self.object.comments.select_related('commented_by').all()
         # context['attachments'] = self.object.attachments.select_related('uploaded_by').all()
         # We remove .select_related() because the data is already prefetched above.
