@@ -706,7 +706,13 @@ class TaskDeleteView(LoginRequiredMixin,UserPassesTestMixin, DeleteView):
 
 @login_required
 def add_comment(request, pk):
+    user = request.user
     task = get_object_or_404(Task, pk=pk)
+
+    if user.profile.role == 'observer':
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'status': 'error', 'message': 'Observers cannot comment.'}, status=403)
+        return redirect('tasks:task_detail', pk=pk)
 
     # ADD THIS: Enforce Rule A for comments
     if task.project.status == 'inactive':
@@ -842,6 +848,9 @@ def update_task_status(request, pk):
 def update_progress(request, pk):
     task = get_object_or_404(Task, pk=pk)
     user = request.user
+
+    if user.profile.role == 'observer':
+        return JsonResponse({'status': 'error', 'message': 'Observers cannot update progress.'}, status=403)
 
     # Updated Permission Logic
     is_authorized = (
