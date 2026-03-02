@@ -391,7 +391,9 @@ class TaskDetailView(LoginRequiredMixin, DetailView):
             'attachments__uploaded_by',
             'history__changed_by'
         )
-        if user.profile.role in ['admin', 'manager','observer']:
+        if user.profile.role in ['admin', 'manager']:
+            return qs
+        if user.profile.role == 'observer':
             return qs
             
         return qs.filter(
