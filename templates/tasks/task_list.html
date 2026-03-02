@@ -33,8 +33,8 @@
                 <i class="fas fa-filter me-1 text-primary"></i> Filters
             </button>
 
-            {% request.user.profile.role != 'observer' %}
-                {% if request.user.profile.role != 'developer' or request.user.led_projects.exists %}
+            {% if request.user.profile.role != 'observer' %}
+                {% if request.user.profile.role != 'developer' %}
                 <a href="{% url 'tasks:task_create' %}" class="btn btn-primary btn-sm fw-bold shadow-sm d-flex align-items-center">
                     <i class="fas fa-plus me-1"></i> New Task
                 </a>
