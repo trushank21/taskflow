@@ -99,7 +99,7 @@
                             {{ task.progress }}%
                         </span>
                         {% if task.status == 'completed'  %}
-                            {% if user == task.assigned_to or user == task.project.team_lead or user.profile.role in 'admin,manager' %}
+                            {% if request.user.profile.role != 'observer' and (user == task.assigned_to or user == task.project.team_lead or user.profile.role in 'admin,manager') %}
                             <button id="btn-toggle-status-ajax" data-id="{{ task.pk }}" class="btn {% if task.status != 'completed' %}btn-success{% else %}btn-outline-primary bg-white{% endif %} btn-sm fw-bold py-1 px-2 shadow-sm" style="font-size: 11px;">
                                 <i class="fas {% if task.status != 'completed' %}fa-check-double{% else %}fa-redo{% endif %} me-1"></i> 
                                 <span id="status-btn-text">{% if task.status != 'completed' %}Mark Done{% else %}Re-open{% endif %}</span>
