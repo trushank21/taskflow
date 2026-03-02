@@ -2,6 +2,9 @@ from django.db import models
 from django.contrib.auth.models import User
 from projects.models import Project
 from cloudinary.models import CloudinaryField
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
+import cloudinary.uploader
 
 class Task(models.Model):
     """Main Task model"""
@@ -122,6 +125,17 @@ class TaskHistory(models.Model):
 
     class Meta:
         ordering = ['-changed_at']
+
+@receiver(post_delete, sender=TaskAttachment)
+def delete_cloudinary_file(sender, instance, **kwargs):
+    if instance.file:
+        try:
+            public_id = getattr(instance.file, 'public_id', None)
+            r_type = getattr(instance.file, 'resource_type', 'image')
+            if public_id:
+                cloudinary.uploader.destroy(public_id, resource_type=r_type)
+        except Exception as e:
+            print(f"Error deleting from Cloudinary: {e}")
 
     def __str__(self):
         return f"{self.task.title}: {self.old_status} -> {self.new_status}"
