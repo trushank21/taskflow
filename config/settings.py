@@ -305,3 +305,19 @@ PASSWORD_RESET_TIMEOUT = 3600  # Time in seconds (3600s = 1 hour)
 
 CELERY_WORKER_MAX_TASKS_PER_CHILD = 10
 CELERY_WORKER_MAX_MEMORY_PER_CHILD = 100000
+
+
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'DEBUG',
+    },
+}
