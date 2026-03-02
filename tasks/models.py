@@ -136,6 +136,6 @@ def delete_cloudinary_file(sender, instance, **kwargs):
             if public_id:
                 cloudinary.uploader.destroy(public_id, resource_type=r_type)
         except Exception as e:
-            print(f"Error deleting from Cloudinary: {e}"
+            print(f"Error deleting from Cloudinary: {e}")
 
 
