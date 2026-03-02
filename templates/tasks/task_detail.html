@@ -72,7 +72,7 @@
                     {% endif %}
                     
                     {# DELETE BUTTON LOGIC #}
-                    {% ifrequest.user.profile.role == 'admin' or request.user.profile.role == 'manager' %}
+                    {% if request.user.profile.role == 'admin' or request.user.profile.role == 'manager' %}
                         <a href="{% url 'tasks:task_delete' task.pk %}" class="btn btn-outline-danger btn-sm fw-bold shadow-sm">
                             <i class="fas fa-trash-alt me-1"></i> Delete Task
                         </a>
