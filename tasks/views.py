@@ -1081,7 +1081,7 @@ def download_attachment(request, pk):
     except Exception as e:
         # log the error for Render logs and continue with the basic url.
         print(f"CRITICAL DOWNLOAD ERROR [ID {pk}]: {e}")
-         messages.error(request, "Download failed.")
+        messages.error(request, "Download failed.")
         return redirect('tasks:task_detail', pk=task.pk)
 
     return HttpResponseRedirect(redirect_url)
