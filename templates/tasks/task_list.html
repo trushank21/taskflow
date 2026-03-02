@@ -33,10 +33,12 @@
                 <i class="fas fa-filter me-1 text-primary"></i> Filters
             </button>
 
-            {% if request.user.profile.role != 'developer' %}
-            <a href="{% url 'tasks:task_create' %}" class="btn btn-primary btn-sm fw-bold shadow-sm d-flex align-items-center">
-                <i class="fas fa-plus me-1"></i> New Task
-            </a>
+            {% request.user.profile.role != 'observer' %}
+                {% if request.user.profile.role != 'developer' or request.user.profile.is_team_leader %}
+                <a href="{% url 'tasks:task_create' %}" class="btn btn-primary btn-sm fw-bold shadow-sm d-flex align-items-center">
+                    <i class="fas fa-plus me-1"></i> New Task
+                </a>
+                {% endif %}
             {% endif %}
         </div>
     </div>
