@@ -60,7 +60,7 @@
                 {# 3. Standard Permission Logic #}
                 {% else %}
                     {# EDIT BUTTON LOGIC #}
-                    {% if request.user.profile.role in 'admin,manager' or task.project.team_lead == request.user or task.assigned_to == request.user %}
+                    {% ifrequest.user.profile.role == 'admin' or request.user.profile.role == 'manager' or task.project.team_lead == request.user or task.assigned_to == request.user %}
                         <a href="{% url 'tasks:task_update' task.pk %}" class="btn btn-light btn-sm fw-bold border text-muted shadow-sm">
                             <i class="fas fa-edit me-1 text-warning"></i> 
                             {% if request.user.profile.role == 'developer' and task.project.team_lead != request.user %}
@@ -72,7 +72,7 @@
                     {% endif %}
                     
                     {# DELETE BUTTON LOGIC #}
-                    {% if request.user.profile.role in 'admin,manager' %}
+                    {% ifrequest.user.profile.role == 'admin' or request.user.profile.role == 'manager' %}
                         <a href="{% url 'tasks:task_delete' task.pk %}" class="btn btn-outline-danger btn-sm fw-bold shadow-sm">
                             <i class="fas fa-trash-alt me-1"></i> Delete Task
                         </a>
@@ -315,7 +315,7 @@
                             </button>
                             <a href="{% url "tasks:download_attachment" attachment.pk %}"  class="text-muted p-1"><i class="fas fa-download small"></i></a>
                             {% if not is_locked and request.user.profile.role != 'observer' %}
-                                {% if request.user == attachment.uploaded_by or request.user.profile.role in 'admin,manager' or task.project.team_lead == request.user %}
+                                {% if request.user == attachment.uploaded_by or request.user.profile.role == 'admin' or request.user.profile.role == 'manager' or task.project.team_lead == request.user %}
                             <button type="button" class="btn p-1 text-danger border-0 bg-transparent delete-attachment-btn"  data-id="{{ attachment.pk }}">
                                 <i class="fas fa-trash-alt small"></i>
                             </button>
@@ -354,7 +354,7 @@
     <h6 class="fw-bold mb-3 text-uppercase small text-muted border-bottom pb-2 d-flex justify-content-between align-items-center">
         <span><i class="fas fa-history me-2 text-secondary"></i>Status Timeline</span>
         {# Only show clear button to authorized roles #}
-        {% if request.user.profile.role in 'admin,manager' %}
+        {% if request.user.profile.role == 'admin' or request.user.profile.role == 'manager' %}
         <button id="btn-clear-history" data-url="{% url 'tasks:clear_history' task.pk %}" class="btn btn-link text-danger p-0 text-decoration-none extra-small fw-bold">
             <i class="fas fa-eraser me-1"></i> Clear
         </button>
