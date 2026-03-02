@@ -64,13 +64,12 @@ class TaskForm(forms.ModelForm):
             }),
         }
 
-    
     def __init__(self, *args, **kwargs):
         # 1. Capture the requesting user passed from the view
         self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         
-        # Capture Project ID safely (Existing code)
+        # Capture Project ID safely
         instance_project = None
         if self.instance.pk:
             try:
@@ -86,40 +85,97 @@ class TaskForm(forms.ModelForm):
 
         if project_id:
             from projects.models import Project
+            # Ensure we have a project object
             project_obj = Project.objects.filter(pk=project_id).first() if isinstance(project_id, (int, str)) else project_id
 
             if project_obj:
-                # Visually lock the project field
                 self.fields['project'].widget.attrs.update({
                     'readonly': 'readonly',
                     'style': 'pointer-events: none; background-color: #e9ecef;',
                     'tabindex': '-1'
                 })
                 
-                # --- START NEW ROLE-BASED FILTERING ---
+                # --- FIXING THE ROLE-BASED FILTERING ---
+                # Get the IDs of the team members
+                team_member_ids = list(project_obj.team_members.values_list('id', flat=True))
                 
-                # Base queryset: everyone in the project
-                assignee_qs = project_obj.team_members.all().distinct()
+                # Start building the final list of allowed IDs
+                allowed_user_ids = set(team_member_ids)
 
                 if self.user:
-                    # Rule: If user is NOT a Manager/Admin, hide Superusers from the project list
                     is_privileged = self.user.profile.role in ['admin', 'manager']
-                    
                     if not is_privileged:
-                        assignee_qs = assignee_qs.exclude(is_superuser=True)
+                        # Find superusers to exclude
+                        superusers = User.objects.filter(is_superuser=True).values_list('id', flat=True)
+                        allowed_user_ids = allowed_user_ids - set(superusers)
 
-                # Safety Net: If the task is already assigned to an Admin, 
-                # we MUST keep them in the list so the current user doesn't wipe them out.
+                # Safety Net: ALWAYS include the currently assigned user to avoid wiping them out
                 if self.instance.pk and self.instance.assigned_to:
-                    assignee_qs = (assignee_qs | User.objects.filter(pk=self.instance.assigned_to.pk)).distinct()
+                    allowed_user_ids.add(self.instance.assigned_to.pk)
 
-                self.fields['assigned_to'].queryset = assignee_qs.order_by('username')
-                self.fields['assigned_to'].help_text = f"Only project members can be assigned. (Admin hidden for non-managers)"
-                
-                # --- END NEW ROLE-BASED FILTERING ---
+                # Set the queryset using the combined list of IDs
+                self.fields['assigned_to'].queryset = User.objects.filter(id__in=allowed_user_ids).order_by('username')
+                self.fields['assigned_to'].help_text = "Only project members can be assigned."
         else:
             self.fields['assigned_to'].queryset = User.objects.none()
-            self.fields['assigned_to'].help_text = "Select a project first to see available team members."
+            self.fields['assigned_to'].help_text = "Select a project first."
+
+    # ------this one at 7:06 2 march
+    # def __init__(self, *args, **kwargs):
+    #     # 1. Capture the requesting user passed from the view
+    #     self.user = kwargs.pop('user', None)
+    #     super().__init__(*args, **kwargs)
+        
+    #     # Capture Project ID safely (Existing code)
+    #     instance_project = None
+    #     if self.instance.pk:
+    #         try:
+    #             instance_project = self.instance.project
+    #         except ObjectDoesNotExist:
+    #             instance_project = None
+
+    #     project_id = (
+    #         self.data.get('project') or 
+    #         self.initial.get('project') or 
+    #         (instance_project.id if instance_project else None)
+    #     )
+
+    #     if project_id:
+    #         from projects.models import Project
+    #         project_obj = Project.objects.filter(pk=project_id).first() if isinstance(project_id, (int, str)) else project_id
+
+    #         if project_obj:
+    #             # Visually lock the project field
+    #             self.fields['project'].widget.attrs.update({
+    #                 'readonly': 'readonly',
+    #                 'style': 'pointer-events: none; background-color: #e9ecef;',
+    #                 'tabindex': '-1'
+    #             })
+                
+    #             # --- START NEW ROLE-BASED FILTERING ---
+                
+    #             # Base queryset: everyone in the project
+    #             assignee_qs = project_obj.team_members.all().distinct()
+
+    #             if self.user:
+    #                 # Rule: If user is NOT a Manager/Admin, hide Superusers from the project list
+    #                 is_privileged = self.user.profile.role in ['admin', 'manager']
+                    
+    #                 if not is_privileged:
+    #                     assignee_qs = assignee_qs.exclude(is_superuser=True)
+
+    #             # Safety Net: If the task is already assigned to an Admin, 
+    #             # we MUST keep them in the list so the current user doesn't wipe them out.
+    #             if self.instance.pk and self.instance.assigned_to:
+    #                 assignee_qs = (assignee_qs | User.objects.filter(pk=self.instance.assigned_to.pk)).distinct()
+
+    #             self.fields['assigned_to'].queryset = assignee_qs.order_by('username')
+    #             self.fields['assigned_to'].help_text = f"Only project members can be assigned. (Admin hidden for non-managers)"
+                
+    #             # --- END NEW ROLE-BASED FILTERING ---
+    #     else:
+    #         self.fields['assigned_to'].queryset = User.objects.none()
+    #         self.fields['assigned_to'].help_text = "Select a project first to see available team members."
 
 
 
