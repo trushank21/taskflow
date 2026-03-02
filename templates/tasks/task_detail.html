@@ -23,7 +23,7 @@
             <div>
                 <nav aria-label="breadcrumb">
                     <ol class="breadcrumb mb-2">
-                        <li class="breadcrumb-item"><a href="{% url 'projects:project_list' %}" class="text-decoration-none text-primary fw-medium">{{ task.project.name }}</a></li>
+                        <li class="breadcrumb-item"><a href="{% url 'projects:project_list' %}" class="text-decoration-none text-primary fw-medium">{{ task.project.title }}</a></li>
                         <li class="breadcrumb-item active">{{task.project}} #Task - {{ task.pk }}</li>
                     </ol>
                 </nav>
@@ -60,7 +60,7 @@
                 {# 3. Standard Permission Logic #}
                 {% else %}
                     {# EDIT BUTTON LOGIC #}
-                    {% ifrequest.user.profile.role == 'admin' or request.user.profile.role == 'manager' or task.project.team_lead == request.user or task.assigned_to == request.user %}
+                    {% if request.user.profile.role == 'admin' or request.user.profile.role == 'manager' or task.project.team_lead == request.user or task.assigned_to == request.user %}
                         <a href="{% url 'tasks:task_update' task.pk %}" class="btn btn-light btn-sm fw-bold border text-muted shadow-sm">
                             <i class="fas fa-edit me-1 text-warning"></i> 
                             {% if request.user.profile.role == 'developer' and task.project.team_lead != request.user %}
@@ -1220,7 +1220,7 @@ $(document).on('hidden.bs.modal', '.modal', function () {
         <i class="fas fa-lock fs-4 me-3"></i>
         <div>
             <strong class="d-block">Project Paused</strong>
-            This task is read-only because the parent project <strong>{{ task.project.name }}</strong> is inactive.
+            This task is read-only because the parent project <strong>{{ task.project.title }}</strong> is inactive.
         </div>
     </div>
     {% endif %}
@@ -1230,7 +1230,7 @@ $(document).on('hidden.bs.modal', '.modal', function () {
             <div>
                 <nav aria-label="breadcrumb">
                     <ol class="breadcrumb mb-2">
-                        <li class="breadcrumb-item"><a href="{% url 'projects:project_list' %}" class="text-decoration-none text-primary fw-medium">{{ task.project.name }}</a></li>
+                        <li class="breadcrumb-item"><a href="{% url 'projects:project_list' %}" class="text-decoration-none text-primary fw-medium">{{ task.project.title }}</a></li>
                         <li class="breadcrumb-item active">Task #{{ task.pk }}</li>
                     </ol>
                 </nav>
