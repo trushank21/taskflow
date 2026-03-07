@@ -4,14 +4,36 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 
 class TaskForm(forms.ModelForm):
+    CHANGE_REQUEST_CHOICES = [
+        ('', '--- Select Type ---'),
+        ('MAJOR', 'MAJOR'),
+        ('MINOR', 'MINOR'),
+    ]
+
+    # We can define the field explicitly to ensure it's a ChoiceField (dropdown)
+    change_request_type = forms.ChoiceField(
+        choices=CHANGE_REQUEST_CHOICES,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        required=False
+    )
+    
     class Meta:
         model = Task
-        fields = ['title', 'description', 'project', 'assigned_to', 'status', 'priority', 'progress', 'due_date', 'estimated_hours', 'actual_hours', 'tags']
+        fields = ['title', 'change_request_no','change_request_type','description', 'project', 'assigned_to', 'status', 'priority', 'progress', 'due_date', 'estimated_hours', 'actual_hours', 'tags']
         widgets = {
             'title': forms.TextInput(attrs={
                 'class': 'form-control',
                 'placeholder': 'Enter task title',
                 'required': True
+            }),
+            # 3. Widget for Change Request Type (Dropdown)
+            'change_request_type': forms.Select(attrs={
+                'class': 'form-select',
+            }),
+            # 2. Added widget for Change Request No
+            'change_request_no': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'e.g., KUTOUR-001'
             }),
             'description': forms.Textarea(attrs={
                 'class': 'form-control',
