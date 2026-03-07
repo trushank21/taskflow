@@ -239,6 +239,43 @@
         </div>
 
         <div class="col-lg-4">
+            
+            {% if task.change_request_no or task.change_request_type %}
+            <div class="card-custom mb-4 shadow-sm border-top border-4 border-warning p-3 animate__animated animate__fadeInRight">
+                <h6 class="fw-bold mb-3 border-bottom pb-2 text-uppercase small text-muted">Request Information</h6>
+                
+                <div class="row g-3">
+                    <div class="col-6 border-end">
+                        <label class="tiny-label text-muted d-block mb-1">CR Number</label>
+                        <span class="fw-bold text-dark small">
+                            {% if task.change_request_no %}
+                                <i class="fas fa-hashtag me-1 text-warning"></i>{{ task.change_request_no }}
+                            {% else %}
+                                <span class="text-muted italic small">N/A</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    
+                    <div class="col-6 ps-3">
+                        <label class="tiny-label text-muted d-block mb-1">Type</label>
+                        {% if task.change_request_type == 'MAJOR' %}
+                            <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle fw-bold" style="font-size: 10px;">
+                                <i class="fas fa-exclamation-triangle me-1"></i>MAJOR
+                            </span>
+                        {% elif task.change_request_type == 'MINOR' %}
+                            <span class="badge bg-info bg-opacity-10 text-info border border-info-subtle fw-bold" style="font-size: 10px;">
+                                <i class="fas fa-info-circle me-1"></i>MINOR
+                            </span>
+                        {% else %}
+                            <span class="text-muted small italic">Not set</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            
+            
 
             <div class="card-custom mb-4 shadow-sm border-top border-4 border-primary p-3">
                 <h6 class="fw-bold mb-3 border-bottom pb-2 text-uppercase small text-muted">Stakeholders</h6>
