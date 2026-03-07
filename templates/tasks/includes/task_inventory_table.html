@@ -29,9 +29,14 @@
                     <td class="ps-4"><span class="small text-muted">{{ forloop.counter }}</span></td>
 
                     <td>
-                        <span class="badge rounded-pill bg-light text-primary border border-primary-subtle fw-bold" style="font-size: 10px; letter-spacing: 0.5px;">
-                            KUTOUR-{{ task.pk|stringformat:"03d" }}
-                        </span>
+                        <div class="d-inline-flex rounded-2 overflow-hidden border border-primary-subtle shadow-sm" style="font-size: 10px; height: 22px;">
+                            <div class="bg-primary px-2 d-flex align-items-center">
+                                <span class="text-white fw-bold text-uppercase">{{ task.change_request_no|default:"CR" }}</span>
+                            </div>
+                            <div class="bg-white px-2 d-flex align-items-center">
+                                <span class="text-primary fw-bold font-monospace">-{{ task.pk|stringformat:"03d" }}</span>
+                            </div>
+                        </div>
                     </td>
                     
                     {% if request.user.profile.role != 'observer' %}
@@ -86,9 +91,14 @@
                     <td class="ps-4"><span class="small text-muted">{{ forloop.counter }}</span></td>
 
                     <td>
-                        <span class="badge rounded-pill bg-primary-subtle text-primary fw-bold" style="font-size: 10px; border: 1px solid rgba(99, 102, 241, 0.2);">
-                            KUTOUR-{{ task.pk|stringformat:"03d" }}
-                        </span>
+                        <div class="d-inline-flex rounded-2 overflow-hidden border border-primary-subtle shadow-sm" style="font-size: 10px; height: 22px;">
+                            <div class="bg-primary px-2 d-flex align-items-center">
+                                <span class="text-white fw-bold text-uppercase">{{ task.change_request_no|default:"CR" }}</span>
+                            </div>
+                            <div class="bg-white px-2 d-flex align-items-center">
+                                <span class="text-primary fw-bold font-monospace">-{{ task.pk|stringformat:"03d" }}</span>
+                            </div>
+                        </div>
                     </td>
 
                     {% if request.user.profile.role != 'observer' %}
