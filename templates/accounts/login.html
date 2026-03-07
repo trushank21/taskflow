@@ -225,11 +225,13 @@
                 </div>
             </div>
 
-            <div class="mb-3 d-flex justify-content-end">
+            {% comment %}
+            <!-- <div class="mb-3 d-flex justify-content-end">
                 <a href="{% url 'accounts:password_reset' %}" class="text-decoration-none small fw-semibold" style="color: var(--primary);">
                     Forgot Password?
                 </a>
-            </div>
+            </div> -->
+            {% endcomment %}
 
             <button type="submit" class="btn btn-auth" id="login-submit-btn">
                 <span class="btn-text">Sign In</span>
@@ -238,9 +240,11 @@
             </button>
         </form>
 
-        <div class="register-link">
+        {% comment %}
+        <!-- <div class="register-link">
             Don't have an account? <a href="{% url 'accounts:register' %}">Create one</a>
-        </div>
+        </div> -->
+        {% endcomment %}
 
         {% comment %} <div class="demo-info text-center">
             <span class="text-muted d-block mb-1">Demo Access</span>
