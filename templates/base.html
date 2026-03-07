@@ -331,9 +331,13 @@ body.modal-open {
             <i class="fas fa-rocket me-2"></i> TaskFlow
         </div>
         <div class="nav-menu">
+
+            {% if user.profile.role != 'observer' %}
             <a href="{% url 'tasks:dashboard' %}" class="nav-link-custom {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
                 <i class="fas fa-chart-pie"></i> Dashboard
             </a>
+            {% endif %}
+            
 
             <a href="{% url 'projects:project_list' %}" class="nav-link-custom {% if 'projects' in request.path %}active{% endif %}">
                 <i class="fas fa-folder"></i> Projects
@@ -343,7 +347,7 @@ body.modal-open {
                 <i class="fas fa-tasks"></i> Tasks
             </a>
 
-            {% if user.profile.role == 'admin' or user.profile.role == 'manager' or user.profile.role == 'observer' %}
+            {% if user.profile.role == 'admin' or user.profile.role == 'manager' or user.profile.role != 'observer' %}
             <hr class="text-muted opacity-25 mx-3">
             <div class="px-3 mb-2 small text-uppercase fw-bold text-muted" style="font-size: 0.7rem; letter-spacing: 1px;">Management</div>
             
@@ -354,9 +358,12 @@ body.modal-open {
 
             <hr class="text-muted opacity-25 mx-3">
 
+            {% if user.profile.role != 'observer' %}
             <a href="{% url 'accounts:profile' %}" class="nav-link-custom {% if 'profile' in request.path or 'password' in request.path %}active{% endif %}">
                 <i class="fas fa-user-circle"></i> Profile
             </a>
+            {% endif %}
+            
         </div>
     </aside>
     {% endif %}
