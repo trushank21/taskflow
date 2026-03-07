@@ -22,7 +22,13 @@ class Task(models.Model):
         ('high', 'High'),
         ('urgent', 'Urgent'),
     )
-    
+    change_request_no = models.CharField(max_length=50, blank=True, null=True)
+    change_request_type = models.CharField(
+        max_length=10, 
+        choices=[('MAJOR', 'MAJOR'), ('MINOR', 'MINOR')], 
+        blank=True, 
+        null=True
+    )
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='tasks')
