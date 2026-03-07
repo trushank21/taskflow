@@ -3,7 +3,7 @@
         <thead class="bg-white border-bottom">
             <tr>
                 <th class="ps-4 py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">No.</th>
-                <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">System ID</th>
+                <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Change Req No.</th>
                 <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Excel CR Number</th>
                 <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Type</th>
                 {% if request.user.profile.role != 'observer' %}
@@ -90,14 +90,7 @@
                 <tr id="task-row-{{ task.pk }}" class="{% if task.status == 'blocked' %}bg-danger bg-opacity-10{% endif %}">
                     <td class="ps-4"><span class="small text-muted">{{ forloop.counter }}</span></td>
                     <td><span class="badge bg-dark text-white font-monospace" style="font-size: 10px;">KU-ERP{{ task.pk|stringformat:"03d" }}</span></td>
-
-                    <td>
-                        <div class="d-inline-flex rounded-pill border border-primary-subtle px-2 py-1 bg-white shadow-sm" style="font-size: 10px;">
-                            <span class="text-primary fw-bold">{{ task.change_request_no|default:"CR" }}</span>
-                            <span class="text-muted mx-1">|</span>
-                            <span class="text-primary font-monospace">{{ task.pk|stringformat:"03d" }}</span>
-                        </div>
-                    </td>
+                    <td><span class="badge bg-dark text-white font-monospace" style="font-size: 10px;">{{ task.change_request_no|default:"CR" }}</span></td>
 
                     <td>
                         {% if task.change_request_type == 'MAJOR' %}
