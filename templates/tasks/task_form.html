@@ -47,6 +47,25 @@
                         {{ form.title }}
                         {% if form.title.errors %}<div class="invalid-feedback d-block">{{ form.title.errors.0 }}</div>{% endif %}
                     </div>
+
+                    <div class="row g-4 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold text-dark">Change Request No.</label>
+                            {{ form.change_request_no }}
+                            {% if form.change_request_no.errors %}
+                                <div class="invalid-feedback d-block">{{ form.change_request_no.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold text-dark">Change Request Type</label>
+                            {{ form.change_request_type }}
+                            {% if form.change_request_type.errors %}
+                                <div class="invalid-feedback d-block">{{ form.change_request_type.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    
                     <div class="mb-3">
                         <label class="form-label fw-semibold text-dark">Detailed Description</label>
                         {{ form.description }}
