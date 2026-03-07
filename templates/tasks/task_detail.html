@@ -239,44 +239,34 @@
         </div>
 
         <div class="col-lg-4">
-            
-            {% if task.change_request_no or task.change_request_type %}
-            <div class="card-custom mb-4 shadow-sm border-top border-4 border-warning p-3 animate__animated animate__fadeInRight">
-                <h6 class="fw-bold mb-3 border-bottom pb-2 text-uppercase small text-muted">Request Information</h6>
-                
-                <div class="row g-3">
-                    <div class="col-6 border-end">
-                        <label class="tiny-label text-muted d-block mb-1">CR Number</label>
-                        <span class="fw-bold text-dark small">
-                            {% if task.change_request_no %}
-                                <i class="fas fa-hashtag me-1 text-warning"></i>{{ task.change_request_no }}
-                            {% else %}
-                                <span class="text-muted italic small">N/A</span>
-                            {% endif %}
+
+            <div class="card-custom mb-4 shadow-sm border-top border-4 border-dark p-3 animate__animated animate__fadeInRight">
+                <h6 class="fw-bold mb-3 border-bottom pb-2 text-uppercase small text-muted">Reference ID</h6>
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <label class="tiny-label text-muted d-block mb-1" style="font-size: 9px;">Change Request No.</label>
+                        <span class="h5 fw-bold text-dark mb-0">
+                            {{ task.change_request_no }}<span class="text-primary">-{{ task.pk|stringformat:"03d" }}</span>
                         </span>
                     </div>
-                    
-                    <div class="col-6 ps-3">
-                        <label class="tiny-label text-muted d-block mb-1">Type</label>
-                        {% if task.change_request_type == 'MAJOR' %}
-                            <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle fw-bold" style="font-size: 10px;">
-                                <i class="fas fa-exclamation-triangle me-1"></i>MAJOR
-                            </span>
-                        {% elif task.change_request_type == 'MINOR' %}
-                            <span class="badge bg-info bg-opacity-10 text-info border border-info-subtle fw-bold" style="font-size: 10px;">
-                                <i class="fas fa-info-circle me-1"></i>MINOR
-                            </span>
-                        {% else %}
-                            <span class="text-muted small italic">Not set</span>
-                        {% endif %}
+                    <div class="bg-light rounded-3 p-2 border">
+                        <i class="fas fa-fingerprint text-primary fs-4"></i>
                     </div>
                 </div>
+                
+                {% if task.change_request_type %}
+                <div class="mt-3 pt-3 border-top">
+                    <label class="tiny-label text-muted d-block mb-1" style="font-size: 9px;">Priority Level</label>
+                    {% if task.change_request_type == 'MAJOR' %}
+                        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle fw-bold w-100 py-2">MAJOR CHANGE</span>
+                    {% else %}
+                        <span class="badge bg-info bg-opacity-10 text-info border border-info-subtle fw-bold w-100 py-2">MINOR CHANGE</span>
+                    {% endif %}
+                </div>
+                {% endif %}
             </div>
-            {% endif %}
 
-            
-            
-
+            {# 2. STAKEHOLDERS CARD #}
             <div class="card-custom mb-4 shadow-sm border-top border-4 border-primary p-3">
                 <h6 class="fw-bold mb-3 border-bottom pb-2 text-uppercase small text-muted">Stakeholders</h6>
                 
@@ -1270,7 +1260,20 @@ $(document).on('hidden.bs.modal', '.modal', function () {
                 <nav aria-label="breadcrumb">
                     <ol class="breadcrumb mb-2">
                         <li class="breadcrumb-item"><a href="{% url 'projects:project_list' %}" class="text-decoration-none text-primary fw-medium">{{ task.project.title }}</a></li>
-                        <li class="breadcrumb-item active">Task #{{ task.pk }}</li>
+                        <li class="ms-2">
+                            <div class="d-inline-flex shadow-sm rounded-2 overflow-hidden border border-primary-subtle" style="height: 24px;">
+                                <div class="bg-primary px-2 d-flex align-items-center">
+                                    <span class="text-white fw-bold" style="font-size: 10px; letter-spacing: 0.5px;">
+                                        {{ task.change_request_no|default:"CR" }}
+                                    </span>
+                                </div>
+                                <div class="bg-white px-2 d-flex align-items-center">
+                                    <span class="text-primary fw-bold font-monospace" style="font-size: 10px;">
+                                        -{{ task.pk|stringformat:"03d" }}
+                                    </span>
+                                </div>
+                            </div>
+                        </li>
                     </ol>
                 </nav>
                 <h2 class="fw-bold text-dark mb-2">{{ task.title }}</h2>
