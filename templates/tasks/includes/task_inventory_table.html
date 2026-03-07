@@ -4,7 +4,7 @@
             <tr>
                 <th class="ps-4 py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">No.</th>
 
-                <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Task ID</th>
+                <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Ref ID & Type</th>
 
                 {% if request.user.profile.role != 'observer' %}
                 <th class="ps-4 py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Assignee</th>
@@ -13,6 +13,9 @@
                 <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Task Info</th>
                 <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Project</th>
                 <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Status</th>
+
+                
+                
                 <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Due Date</th>
                 <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px; width: 140px;">Progress</th>
                 <th class="pe-4 py-3 text-muted small text-uppercase border-0 fw-bold text-end" style="font-size: 11px;">Actions</th>
@@ -29,13 +32,27 @@
                     <td class="ps-4"><span class="small text-muted">{{ forloop.counter }}</span></td>
 
                     <td>
-                        <div class="d-inline-flex rounded-2 overflow-hidden border border-primary-subtle shadow-sm" style="font-size: 10px; height: 22px;">
-                            <div class="bg-primary px-2 d-flex align-items-center">
-                                <span class="text-white fw-bold text-uppercase">{{ task.change_request_no|default:"CR" }}</span>
+                        <div class="d-flex flex-column gap-1">
+                            <div class="d-inline-flex rounded-2 overflow-hidden border border-primary-subtle shadow-sm" style="font-size: 10px; height: 20px; width: fit-content;">
+                                <div class="bg-primary px-2 d-flex align-items-center">
+                                    <span class="text-white fw-bold text-uppercase">{{ task.change_request_no|default:"CR" }}</span>
+                                </div>
+                                <div class="bg-white px-2 d-flex align-items-center">
+                                    <span class="text-primary fw-bold font-monospace">-{{ task.pk|stringformat:"03d" }}</span>
+                                </div>
                             </div>
-                            <div class="bg-white px-2 d-flex align-items-center">
-                                <span class="text-primary fw-bold font-monospace">-{{ task.pk|stringformat:"03d" }}</span>
-                            </div>
+                    
+                            {% if task.change_request_type %}
+                                {% if task.change_request_type == 'MAJOR' %}
+                                    <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle extra-small py-0" style="font-size: 8px; width: fit-content;">
+                                        <i class="fas fa-exclamation-triangle me-1"></i>MAJOR
+                                    </span>
+                                {% elif task.change_request_type == 'MINOR' %}
+                                    <span class="badge bg-info bg-opacity-10 text-info border border-info-subtle extra-small py-0" style="font-size: 8px; width: fit-content;">
+                                        <i class="fas fa-info-circle me-1"></i>MINOR
+                                    </span>
+                                {% endif %}
+                            {% endif %}
                         </div>
                     </td>
                     
@@ -91,13 +108,27 @@
                     <td class="ps-4"><span class="small text-muted">{{ forloop.counter }}</span></td>
 
                     <td>
-                        <div class="d-inline-flex rounded-2 overflow-hidden border border-primary-subtle shadow-sm" style="font-size: 10px; height: 22px;">
-                            <div class="bg-primary px-2 d-flex align-items-center">
-                                <span class="text-white fw-bold text-uppercase">{{ task.change_request_no|default:"CR" }}</span>
+                        <div class="d-flex flex-column gap-1">
+                            <div class="d-inline-flex rounded-2 overflow-hidden border border-primary-subtle shadow-sm" style="font-size: 10px; height: 20px; width: fit-content;">
+                                <div class="bg-primary px-2 d-flex align-items-center">
+                                    <span class="text-white fw-bold text-uppercase">{{ task.change_request_no|default:"CR" }}</span>
+                                </div>
+                                <div class="bg-white px-2 d-flex align-items-center">
+                                    <span class="text-primary fw-bold font-monospace">-{{ task.pk|stringformat:"03d" }}</span>
+                                </div>
                             </div>
-                            <div class="bg-white px-2 d-flex align-items-center">
-                                <span class="text-primary fw-bold font-monospace">-{{ task.pk|stringformat:"03d" }}</span>
-                            </div>
+                    
+                            {% if task.change_request_type %}
+                                {% if task.change_request_type == 'MAJOR' %}
+                                    <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle extra-small py-0" style="font-size: 8px; width: fit-content;">
+                                        <i class="fas fa-exclamation-triangle me-1"></i>MAJOR
+                                    </span>
+                                {% elif task.change_request_type == 'MINOR' %}
+                                    <span class="badge bg-info bg-opacity-10 text-info border border-info-subtle extra-small py-0" style="font-size: 8px; width: fit-content;">
+                                        <i class="fas fa-info-circle me-1"></i>MINOR
+                                    </span>
+                                {% endif %}
+                            {% endif %}
                         </div>
                     </td>
 
