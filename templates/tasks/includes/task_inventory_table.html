@@ -26,7 +26,7 @@
                 {# --- LOCKED ROW LAYOUT --- #}
                 <tr id="task-row-{{ task.pk }}" class="bg-light-subtle opacity-75">
                     <td class="ps-4"><span class="small text-muted">{{ forloop.counter }}</span></td>
-                    <td><span class="badge bg-dark text-white font-monospace" style="font-size: 10px;">KU-ERP{{ task.pk|stringformat:"03d" }}</span></td>
+                    <td><span class="badge bg-dark text-white font-monospace" style="font-size: 10px;">KU-ERP{{ task.display_id|stringformat:"03d" }}</span></td>
                     <td><span class="badge bg-dark text-white font-monospace" style="font-size: 10px;">{{ task.change_request_no|default:"---" }}</span></td>
                     
 
