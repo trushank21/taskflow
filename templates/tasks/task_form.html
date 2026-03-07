@@ -48,6 +48,11 @@
                         {% if form.title.errors %}<div class="invalid-feedback d-block">{{ form.title.errors.0 }}</div>{% endif %}
                     </div>
 
+                    <div class="mb-3">
+                        <label for="{{ form.days.id_for_label }}" class="form-label fw-bold">Days</label>
+                        {{ form.days }}
+                    </div>
+
                     <div class="row g-4 mb-4">
                         <div class="col-md-6">
                             <label class="form-label fw-semibold text-dark">Change Request No.</label>
