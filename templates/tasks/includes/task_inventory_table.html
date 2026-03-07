@@ -4,11 +4,16 @@
             <tr>
                 <th class="ps-4 py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">No.</th>
 
-                <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Ref ID & Type</th>
+                <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">System ID</th>
+                
+
+                <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Excel CR Number</th>
 
                 {% if request.user.profile.role != 'observer' %}
                 <th class="ps-4 py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Assignee</th>
                 {% endif %}
+
+                <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Days</th>
                 
                 <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Task Info</th>
                 <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Project</th>
@@ -17,6 +22,9 @@
                 
                 
                 <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Due Date</th>
+                
+
+                
                 <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px; width: 140px;">Progress</th>
                 <th class="pe-4 py-3 text-muted small text-uppercase border-0 fw-bold text-end" style="font-size: 11px;">Actions</th>
             </tr>
@@ -32,29 +40,22 @@
                     <td class="ps-4"><span class="small text-muted">{{ forloop.counter }}</span></td>
 
                     <td>
-                        <div class="d-flex flex-column gap-1">
-                            <div class="d-inline-flex rounded-2 overflow-hidden border border-primary-subtle shadow-sm" style="font-size: 10px; height: 20px; width: fit-content;">
-                                <div class="bg-primary px-2 d-flex align-items-center">
-                                    <span class="text-white fw-bold text-uppercase">{{ task.change_request_no|default:"CR" }}</span>
-                                </div>
-                                <div class="bg-white px-2 d-flex align-items-center">
-                                    <span class="text-primary fw-bold font-monospace">-{{ task.pk|stringformat:"03d" }}</span>
-                                </div>
-                            </div>
-                    
-                            {% if task.change_request_type %}
-                                {% if task.change_request_type == 'MAJOR' %}
-                                    <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle extra-small py-0" style="font-size: 8px; width: fit-content;">
-                                        <i class="fas fa-exclamation-triangle me-1"></i>MAJOR
-                                    </span>
-                                {% elif task.change_request_type == 'MINOR' %}
-                                    <span class="badge bg-info bg-opacity-10 text-info border border-info-subtle extra-small py-0" style="font-size: 8px; width: fit-content;">
-                                        <i class="fas fa-info-circle me-1"></i>MINOR
-                                    </span>
-                                {% endif %}
+                        <span class="badge bg-dark text-white font-monospace" style="font-size: 10px; letter-spacing: 1px;">
+                            KU-ERP{{ task.pk|stringformat:"03d" }}
+                        </span>
+                    </td>
+
+                    <td>
+                        <div class="d-flex flex-column">
+                            <span class="fw-bold text-dark small">{{ task.change_request_no|default:"---" }}</span>
+                            {% if task.change_request_type == 'MAJOR' %}
+                                <span class="text-danger extra-small fw-bold" style="font-size: 8px;">● MAJOR</span>
+                            {% else %}
+                                <span class="text-info extra-small fw-bold" style="font-size: 8px;">● MINOR</span>
                             {% endif %}
                         </div>
                     </td>
+                   
                     
                     {% if request.user.profile.role != 'observer' %}
                     <td class="ps-4">
@@ -67,6 +68,13 @@
                         </div>
                     </td>
                     {% endif %}
+
+                    <td>
+                        <span class="badge bg-light text-muted border px-2">
+                            <i class="far fa-calendar-alt me-1"></i>
+                            {{ task.estimated_days|default:"--" }} Days
+                        </span>
+                    </td>
                     
                     <td>
                         <div class="d-flex align-items-center">
