@@ -33,6 +33,7 @@ class Task(models.Model):
         blank=True, 
         null=True
     )
+    display_id = models.IntegerField(unique=True, editable=False, null=True)
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='tasks')
@@ -59,6 +60,17 @@ class Task(models.Model):
 
     def get_status_history(self):
         return self.history.all().select_related('changed_by')
+
+    def save(self, *args, **kwargs):
+        if not self.display_id:
+            # Look for the highest display_id currently assigned
+            last_task = Task.objects.order_by('-display_id').first()
+            if last_task and last_task.display_id:
+                self.display_id = last_task.display_id + 1
+            else:
+                # If this is the very first task ever, start at 1
+                self.display_id = 1
+        super().save(*args, **kwargs)
     
     # def sync_status_and_progress(self):
     #     """
