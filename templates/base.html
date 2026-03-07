@@ -389,7 +389,10 @@ body.modal-open {
                             {% endif %}
                         </div>
                         <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                            {% if request.user.profile.role != 'observer' %}
                             <li><a class="dropdown-item" href="{% url 'accounts:profile' %}">Profile Settings</a></li>
+                            {% endif %}
+                            
                             <li><hr class="dropdown-divider"></li>
                             <li>
                                 <form action="{% url 'logout' %}" method="post">
