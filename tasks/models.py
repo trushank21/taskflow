@@ -22,6 +22,10 @@ class Task(models.Model):
         ('high', 'High'),
         ('urgent', 'Urgent'),
     )
+    days = models.PositiveIntegerField(
+        default=1, 
+        help_text="Total number of days allocated for this task"
+    )
     change_request_no = models.CharField(max_length=50, blank=True, null=True)
     change_request_type = models.CharField(
         max_length=10, 
