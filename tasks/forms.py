@@ -89,7 +89,9 @@ class TaskForm(forms.ModelForm):
             }),
         }
     def clean_days(self):
-        days = self.cleaned_data.get('duration_days')
+        days = self.cleaned_data.get('days')
+        if days is None:
+            raise forms.ValidationError("Please enter the number of days.")
         if days < 1:
             raise forms.ValidationError("Days must be at least 1 day.")
         return days
