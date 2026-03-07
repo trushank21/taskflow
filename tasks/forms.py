@@ -19,7 +19,7 @@ class TaskForm(forms.ModelForm):
     
     class Meta:
         model = Task
-        fields = ['title', 'change_request_no','change_request_type','description', 'project', 'assigned_to', 'status', 'priority', 'progress', 'due_date', 'estimated_hours', 'actual_hours', 'tags']
+        fields = ['title', 'change_request_no','change_request_type','description','days' ,'project', 'assigned_to', 'status', 'priority', 'progress', 'due_date', 'estimated_hours', 'actual_hours', 'tags']
         widgets = {
             'title': forms.TextInput(attrs={
                 'class': 'form-control',
@@ -35,6 +35,9 @@ class TaskForm(forms.ModelForm):
                 'class': 'form-control',
                 'placeholder': 'e.g., KUTOUR-001'
             }),
+
+            'days': forms.NumberInput(attrs={'min': '1', 'class': 'form-control'}),
+            
             'description': forms.Textarea(attrs={
                 'class': 'form-control',
                 'placeholder': 'Enter task description (optional)',
@@ -85,6 +88,11 @@ class TaskForm(forms.ModelForm):
                 'placeholder': 'Comma-separated tags (optional)'
             }),
         }
+    def clean_days(self):
+        days = self.cleaned_data.get('duration_days')
+        if days < 1:
+            raise forms.ValidationError("Days must be at least 1 day.")
+        return days
 
     def __init__(self, *args, **kwargs):
         # 1. Capture the requesting user passed from the view
