@@ -70,9 +70,8 @@
                     {% endif %}
 
                     <td>
-                        <span class="badge bg-light text-muted border px-2">
-                            <i class="far fa-calendar-alt me-1"></i>
-                            {{ task.estimated_days|default:"--" }} Days
+                        <span class="badge bg-light text-primary border border-primary-subtle fw-bold">
+                            {{ task.days|default:"0" }} <small class="text-muted" style="font-size: 9px;">Days</small>
                         </span>
                     </td>
                     
