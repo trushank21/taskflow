@@ -36,7 +36,11 @@ class TaskForm(forms.ModelForm):
                 'placeholder': 'e.g., KUTOUR-001'
             }),
 
-            'days': forms.NumberInput(attrs={'min': '1', 'class': 'form-control'}),
+            days = forms.DecimalField(
+                    max_digits=5, 
+                    decimal_places=2, 
+                    widget=forms.NumberInput(attrs={'step': '0.1', 'min': '0.1'})
+                )
             
             'description': forms.Textarea(attrs={
                 'class': 'form-control',
