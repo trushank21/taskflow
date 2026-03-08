@@ -16,6 +16,12 @@ class TaskForm(forms.ModelForm):
         widget=forms.Select(attrs={'class': 'form-select'}),
         required=False
     )
+
+    days = forms.DecimalField(
+                    max_digits=5, 
+                    decimal_places=2, 
+                    widget=forms.NumberInput(attrs={'step': '0.1', 'min': '0.1'})
+                )
     
     class Meta:
         model = Task
@@ -36,11 +42,7 @@ class TaskForm(forms.ModelForm):
                 'placeholder': 'e.g., KUTOUR-001'
             }),
 
-            days = forms.DecimalField(
-                    max_digits=5, 
-                    decimal_places=2, 
-                    widget=forms.NumberInput(attrs={'step': '0.1', 'min': '0.1'})
-                )
+            
             
             'description': forms.Textarea(attrs={
                 'class': 'form-control',
