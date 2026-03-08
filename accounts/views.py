@@ -71,7 +71,10 @@ def register_view(request):
 
 
 def login_view(request):
-    if request.user.is_authenticated:
+    
+    if request.user.is_authenticated and request.user.profile.role=='observer':
+        return redirect('tasks:task_list')
+    elif request.user.is_authenticated:
         return redirect('tasks:dashboard')
     
     if request.method == 'POST':
