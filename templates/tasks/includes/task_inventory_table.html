@@ -13,6 +13,7 @@
                 <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Task Info</th>
                 <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Project</th>
                 <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Status</th>
+                
                 <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Due Date</th>
                 <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px; width: 140px;">Progress</th>
                 <th class="pe-4 py-3 text-muted small text-uppercase border-0 fw-bold text-end" style="font-size: 11px;">Actions</th>
@@ -32,9 +33,9 @@
 
                     <td>
                         {% if task.change_request_type == 'MAJOR' %}
-                            <span class="text-danger fw-bold" style="font-size: 10px;"><i class="fas fa-circle me-1" style="font-size: 6px;"></i>MAJOR</span>
+                            <span class="text-danger fw-bold" style="font-size: 10px;">MAJOR</span>
                         {% else %}
-                            <span class="text-info fw-bold" style="font-size: 10px;"><i class="fas fa-circle me-1" style="font-size: 6px;"></i>MINOR</span>
+                            <span class="text-info fw-bold" style="font-size: 10px;">MINOR</span>
                         {% endif %}
                     </td>
                     
@@ -64,7 +65,21 @@
                             </div>
                         </div>
                     </td>
-                    <td><span class="small fw-bold text-muted">{{ task.project.title }}</span></td>
+                    <!-- <td><span class="small fw-bold text-muted">{{ task.project.title }}</span></td> -->
+
+                    <td>
+                        <span class="badge rounded-pill px-2 py-1 fw-bold" 
+                              style="font-size: 10px; 
+                              {% if task.project.status == 'active' %}background: #e0e7ff; color: #4338ca;
+                              {% elif task.project.status == 'on_hold' %}background: #fef3c7; color: #92400e;
+                              {% elif task.project.status == 'inactive' %}background: #fee2e2; color: #b91c1c;
+                              {% else %}background: #dcfce7; color: #15803d;{% endif %}">
+                            {% if task.project.status == 'inactive' %}<i class="fas fa-lock me-1"></i>{% endif %}
+                            {{ task.project.title|truncatechars:18 }}
+                            
+                        </span>
+                    </td>
+                    
                     <td>
                         <span class="badge-pro {% if task.status == 'completed' %}bg-done{% elif task.status == 'blocked' %}bg-danger text-white{% elif task.status == 'todo' %}bg-todo{% else %}bg-progress{% endif %}" style="font-size: 10px; opacity: 0.6;">
                             {{ task.get_status_display }}
@@ -80,7 +95,9 @@
                     <td class="pe-4 text-end">
                         <div class="d-flex justify-content-end gap-2">
                             <a href="{% url 'tasks:task_detail' task.pk %}" class="btn-action btn-detail"><i class="fas fa-expand-alt"></i></a>
+                            {% if request.user.profile.role != 'observer' %}
                             <span class="btn-action text-muted opacity-50" style="cursor: not-allowed;"><i class="fas fa-lock"></i></span>
+                            {% endif %}
                         </div>
                     </td>
                 </tr>
@@ -95,9 +112,9 @@
 
                     <td>
                         {% if task.change_request_type == 'MAJOR' %}
-                            <span class="text-danger fw-bold" style="font-size: 10px;"><i class="fas fa-circle me-1" style="font-size: 6px;"></i>MAJOR</span>
+                            <span class="text-danger fw-bold" style="font-size: 10px;">MAJOR</span>
                         {% else %}
-                            <span class="text-info fw-bold" style="font-size: 10px;"><i class="fas fa-circle me-1" style="font-size: 6px;"></i>MINOR</span>
+                            <span class="text-info fw-bold" style="font-size: 10px;">MINOR</span>
                         {% endif %}
                     </td>
                     
@@ -117,7 +134,21 @@
                             {{ task.get_priority_display }}
                         </span>
                     </td>
-                    <td><span class="small fw-bold">{{ task.project.title }}</span></td>
+                    <!-- <td><span class="small fw-bold">{{ task.project.title }}</span></td> -->
+
+                    <td>
+                        <span class="badge rounded-pill px-2 py-1 fw-bold" 
+                              style="font-size: 10px; 
+                              {% if task.project.status == 'active' %}background: #e0e7ff; color: #4338ca;
+                              {% elif task.project.status == 'on_hold' %}background: #fef3c7; color: #92400e;
+                              {% elif task.project.status == 'inactive' %}background: #fee2e2; color: #b91c1c;
+                              {% else %}background: #dcfce7; color: #15803d;{% endif %}">
+                            {% if task.project.status == 'inactive' %}<i class="fas fa-lock me-1"></i>{% endif %}
+                            {{ task.project.title|truncatechars:18 }}
+                            
+                        </span>
+                    </td>
+                    
                     <td>
                         <div class="dropdown">
                             <button class="btn btn-sm dropdown-toggle border-0 p-0" type="button" data-bs-toggle="dropdown">
