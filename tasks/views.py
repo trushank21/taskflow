@@ -42,6 +42,10 @@ def dashboard(request):
     view_mode = request.GET.get('view', 'personal')
     search_query = request.GET.get('q', '').strip()
 
+    ##3-8-2026
+    if user.profile.role=='observer':
+        return redirect('tasks:task_list')
+
     if user.profile.role in ['admin', 'manager']:
         project_pool = Project.objects.all()
     else:
