@@ -95,13 +95,9 @@
 
                     <td>
                         {% if task.change_request_type == 'MAJOR' %}
-                            <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle px-2" style="font-size: 9px;">
-                                <i class="fas fa-exclamation-triangle me-1"></i>MAJOR
-                            </span>
-                        {% elif task.change_request_type == 'MINOR' %}
-                            <span class="badge bg-info bg-opacity-10 text-info border border-info-subtle px-2" style="font-size: 9px;">
-                                <i class="fas fa-info-circle me-1"></i>MINOR
-                            </span>
+                            <span class="text-danger fw-bold" style="font-size: 10px;"><i class="fas fa-circle me-1" style="font-size: 6px;"></i>MAJOR</span>
+                        {% else %}
+                            <span class="text-info fw-bold" style="font-size: 10px;"><i class="fas fa-circle me-1" style="font-size: 6px;"></i>MINOR</span>
                         {% endif %}
                     </td>
                     
