@@ -22,7 +22,7 @@ class Task(models.Model):
         ('high', 'High'),
         ('urgent', 'Urgent'),
     )
-    days = models.DecimalField(max_digits=5, decimal_places=2, default=0.0)
+    days = models.DecimalField(max_digits=5, decimal_places=2, default=0.1)
     change_request_no = models.CharField(max_length=50, blank=True, null=True)
     change_request_type = models.CharField(
         max_length=10, 
