@@ -51,6 +51,13 @@
                     <div class="mb-3">
                         <label for="{{ form.days.id_for_label }}" class="form-label fw-bold">Days</label>
                         {{ form.days }}
+                        {% if form.days.errors %}
+                            <div class="text-danger">
+                                {% for error in form.days.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
                     </div>
 
                     <div class="row g-4 mb-4">
