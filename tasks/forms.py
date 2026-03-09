@@ -24,7 +24,7 @@ class TaskForm(forms.ModelForm):
                 )
     
     filter_projects = forms.ModelMultipleChoiceField(
-        queryset=Project.objects.all(),
+        queryset=None, 
         required=False,
         widget=forms.SelectMultiple(attrs={'class': 'form-select select2', 'placeholder': 'Filter by Projects'})
     )
