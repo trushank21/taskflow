@@ -98,28 +98,28 @@ class TaskFilter(django_filters.FilterSet):
         
         if user:
         # Get the user's role from the profile
-        user_role = getattr(user.profile, 'role', 'developer')
-
-        # 1. Logic for Projects Dropdown
-        if user_role in ['observer', 'admin']:
-            # Observers and Admins see EVERY project in the filter
-            self.filters['project'].field.queryset = Project.objects.all()
-        else:
-            # Developers/Managers only see their own projects
-            self.filters['project'].field.queryset = Project.objects.filter(
-                Q(team_lead=user) | Q(team_members=user)
-            ).distinct()
-
-        # 2. Logic for Assigned To Dropdown
-        if user_role in ['observer', 'admin']:
-            # Observers/Admins can see all developers
-            self.filters['assigned_to'].field.queryset = User.objects.filter(
-                profile__role='developer'
-            ).select_related('profile')
-        else:
-            # Restricted users only see teammates from shared projects
-            shared_projects = self.filters['project'].field.queryset
-            self.filters['assigned_to'].field.queryset = User.objects.filter(
-                Q(projects_assigned__in=shared_projects) | 
-                Q(led_projects__in=shared_projects)
-            ).distinct().select_related('profile')
+            user_role = getattr(user.profile, 'role', 'developer')
+    
+            # 1. Logic for Projects Dropdown
+            if user_role in ['observer', 'admin']:
+                # Observers and Admins see EVERY project in the filter
+                self.filters['project'].field.queryset = Project.objects.all()
+            else:
+                # Developers/Managers only see their own projects
+                self.filters['project'].field.queryset = Project.objects.filter(
+                    Q(team_lead=user) | Q(team_members=user)
+                ).distinct()
+    
+            # 2. Logic for Assigned To Dropdown
+            if user_role in ['observer', 'admin']:
+                # Observers/Admins can see all developers
+                self.filters['assigned_to'].field.queryset = User.objects.filter(
+                    profile__role='developer'
+                ).select_related('profile')
+            else:
+                # Restricted users only see teammates from shared projects
+                shared_projects = self.filters['project'].field.queryset
+                self.filters['assigned_to'].field.queryset = User.objects.filter(
+                    Q(projects_assigned__in=shared_projects) | 
+                    Q(led_projects__in=shared_projects)
+                ).distinct().select_related('profile')
