@@ -70,7 +70,20 @@ class Task(models.Model):
     def get_status_history(self):
         return self.history.all().select_related('changed_by')
 
+    def clean(self):
+        super().clean()
+        if self.pk:
+            # 1. Prevent self-dependency
+            if self in self.dependencies.all():
+                raise ValidationError("A task cannot depend on itself.")
+            
+            # 2. Prevent simple circular dependency (A -> B and B -> A)
+            for dep in self.dependencies.all():
+                if self in dep.dependencies.all():
+                    raise ValidationError(f"Circular dependency detected: {dep.title} already depends on this task.")
+
     def save(self, *args, **kwargs):
+        self.full_clean()
         if not self.display_id:
             # Look for the highest display_id currently assigned
             last_task = Task.objects.order_by('-display_id').first()
