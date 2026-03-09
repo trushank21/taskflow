@@ -24,7 +24,7 @@ class TaskForm(forms.ModelForm):
                 )
     
     filter_projects = forms.ModelMultipleChoiceField(
-        queryset=None, 
+        queryset=Task.objects.none(), 
         required=False,
         widget=forms.SelectMultiple(attrs={'class': 'form-select select2', 'placeholder': 'Filter by Projects'})
     )
@@ -124,6 +124,7 @@ class TaskForm(forms.ModelForm):
         
         # Capture Project ID safely
         instance_project = None
+        self.fields['dependencies'].queryset = Task.objects.all()
         if self.instance.pk:
             self.fields['dependencies'].queryset = Task.objects.exclude(pk=self.instance.pk)
             try:
@@ -173,6 +174,17 @@ class TaskForm(forms.ModelForm):
         else:
             self.fields['assigned_to'].queryset = User.objects.none()
             self.fields['assigned_to'].help_text = "Select a project first."
+
+        from projects.models import Project  # Safe local import
+        
+        if self.user and self.user.is_superuser:
+            self.fields['filter_projects'].queryset = Project.objects.all()
+        elif self.user:
+            # Show only projects the user is a member of
+            self.fields['filter_projects'].queryset = Project.objects.filter(team_members=self.user)
+        else:
+            self.fields['filter_projects'].queryset = Project.objects.none()
+        
 
     # ------this one at 7:06 2 march
     # def __init__(self, *args, **kwargs):
