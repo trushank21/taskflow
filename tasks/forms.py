@@ -120,6 +120,9 @@ class TaskForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
+
+        from projects.models import Project  # This must be here!
+        from django.contrib.auth.models import User
         
         # 1. Initialize Filter Projects field based on user access
         if self.user:
