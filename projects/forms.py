@@ -12,7 +12,6 @@ class ProjectForm(forms.ModelForm):
                 'placeholder': 'Enter project name'
             }),
             'color': forms.RadioSelect(attrs={'class': 'color-selector'}),
-            ,
             'description': forms.Textarea(attrs={
                 'class': 'form-control',
                 'placeholder': 'Project description',
