@@ -28,8 +28,13 @@
                 <tr id="task-row-{{ task.pk }}" class="bg-light-subtle opacity-75">
                     <td class="ps-4"><span class="small text-muted">{{ forloop.counter }}</span></td>
                     <td><span class="badge bg-dark text-white font-monospace" style="font-size: 10px;">KU-ERP{{ task.display_id|stringformat:"03d" }}</span></td>
-                    <td><span class="badge bg-dark text-white font-monospace" style="font-size: 10px;">{{ task.change_request_no|default:"---" }}</span></td>
-                    
+                    <!-- <td><span class="badge bg-dark text-white font-monospace" style="font-size: 10px;">{{ task.change_request_no|default:"---" }}</span></td> -->
+                    <td>
+                        <span class="badge font-monospace shadow-sm" 
+                              style="font-size: 10px; background-color: {{ task.project.color }}; color: white; border: 1px solid rgba(0,0,0,0.1);">
+                            {{ task.change_request_no|default:"CR" }}
+                        </span>
+                    </td>
 
                     <td>
                         {% if task.change_request_type == 'MAJOR' %}
@@ -67,7 +72,7 @@
                     </td>
                     <!-- <td><span class="small fw-bold text-muted">{{ task.project.title }}</span></td> -->
 
-                    <td>
+                    <!-- <td>
                         <span class="badge rounded-pill px-2 py-1 fw-bold" 
                               style="font-size: 10px; 
                               {% if task.project.status == 'active' %}background: #e0e7ff; color: #4338ca;
@@ -78,7 +83,21 @@
                             {{ task.project.title|truncatechars:18 }}
                             
                         </span>
+                    </td> -->
+
+                    
+                    <td>
+                        <span class="badge rounded-pill px-3 py-1 fw-bold shadow-sm" 
+                              style="font-size: 10px; background-color: {{ task.project.color }}20; color: {{ task.project.color }}; border: 1px solid {{ task.project.color }}40;">
+                            <i class="fas fa-project-diagram me-1"></i>
+                            {{ task.project.title|truncatechars:18 }}
+                        </span>
                     </td>
+
+         
+
+                    
+                    
                     
                     <td>
                         <span class="badge-pro {% if task.status == 'completed' %}bg-done{% elif task.status == 'blocked' %}bg-danger text-white{% elif task.status == 'todo' %}bg-todo{% else %}bg-progress{% endif %}" style="font-size: 10px; opacity: 0.6;">
