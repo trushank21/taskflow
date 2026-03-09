@@ -20,6 +20,7 @@ urlpatterns = [
     path('attachment/<int:pk>/download/', views.download_attachment, name='download_attachment'),
     path('tasks/<int:pk>/clear-history/', views.clear_task_history, name='clear_history'),
     # path('update-status/<int:pk>/', views.update_task_status, name='update_task_status'),
+    path('api/get-tasks-by-projects/', views.get_tasks_by_projects, name='get_tasks_by_projects'),
 ]
 
 
