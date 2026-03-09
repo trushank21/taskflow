@@ -23,9 +23,15 @@ class TaskForm(forms.ModelForm):
                     widget=forms.NumberInput(attrs={'step': '0.1', 'min': '0.1'})
                 )
     
+    filter_projects = forms.ModelMultipleChoiceField(
+        queryset=Project.objects.all(),
+        required=False,
+        widget=forms.SelectMultiple(attrs={'class': 'form-select select2', 'placeholder': 'Filter by Projects'})
+    )
+    
     class Meta:
         model = Task
-        fields = ['title', 'change_request_no','change_request_type','description','days' ,'project', 'assigned_to', 'status', 'priority', 'progress', 'due_date', 'estimated_hours', 'actual_hours', 'tags']
+        fields = ['title', 'change_request_no','dependencies', 'dependency_remark','change_request_type','description','days' ,'project', 'assigned_to', 'status', 'priority', 'progress', 'due_date', 'estimated_hours', 'actual_hours', 'tags']
         widgets = {
             'title': forms.TextInput(attrs={
                 'class': 'form-control',
@@ -41,8 +47,17 @@ class TaskForm(forms.ModelForm):
                 'class': 'form-control',
                 'placeholder': 'e.g., KUTOUR-001'
             }),
-
             
+            'dependencies': forms.SelectMultiple(attrs={
+                'class': 'form-select select2',
+                'id': 'id_dependencies'
+            }),
+
+            'dependency_remark': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 2,
+                'placeholder': 'Explain why this task is waiting...'
+            }),
             
             'description': forms.Textarea(attrs={
                 'class': 'form-control',
@@ -110,6 +125,7 @@ class TaskForm(forms.ModelForm):
         # Capture Project ID safely
         instance_project = None
         if self.instance.pk:
+            self.fields['dependencies'].queryset = Task.objects.exclude(pk=self.instance.pk)
             try:
                 instance_project = self.instance.project
             except ObjectDoesNotExist:
