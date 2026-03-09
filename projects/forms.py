@@ -5,12 +5,14 @@ from django.contrib.auth.models import User
 class ProjectForm(forms.ModelForm):
     class Meta:
         model = Project
-        fields = ['title', 'description', 'status', 'team_lead', 'team_members', 'start_date', 'end_date']
+        fields = ['title', 'description', 'status', 'color','team_lead', 'team_members', 'start_date', 'end_date']
         widgets = {
             'title': forms.TextInput(attrs={
                 'class': 'form-control',
                 'placeholder': 'Enter project name'
             }),
+            'color': forms.RadioSelect(attrs={'class': 'color-selector'}),
+            ,
             'description': forms.Textarea(attrs={
                 'class': 'form-control',
                 'placeholder': 'Project description',
