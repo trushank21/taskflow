@@ -126,21 +126,24 @@ class TaskForm(forms.ModelForm):
         
         # 1. Initialize Filter Projects field based on user access
         if self.user:
-            if self.user.is_superuser:
-                self.fields['filter_projects'].queryset = Project.objects.all()
+            if self.user.is_superuser or self.user.profile.role in ['admin', 'manager', 'observer']:
+                self.fields['filter_projects'].queryset = Project.objects.all().order_by('title')
+                self.fields['project'].queryset = Project.objects.all().order_by('title')
             else:
-                self.fields['filter_projects'].queryset = Project.objects.filter(team_members=self.user)
+                self.fields['filter_projects'].queryset = Project.objects.filter(team_members=self.user).order_by('title')
+                self.fields['project'].queryset = Project.objects.filter(team_members=self.user).order_by('title')
+                
 
         # 2. Logic for Dependencies Queryset
         # If we are submitting data (POST), use the filter_projects selection
         if self.data.getlist('filter_projects'):
             p_ids = self.data.getlist('filter_projects')
-            self.fields['dependencies'].queryset = Task.objects.filter(project_id__in=p_ids)
+            self.fields['dependencies'].queryset = Task.objects.filter(project_id__in=p_ids).select_related('project')
         # If we are editing an existing task, show tasks from its own project by default
         elif self.instance.pk:
-            self.fields['dependencies'].queryset = Task.objects.filter(project=self.instance.project).exclude(pk=self.instance.pk)
+            self.fields['dependencies'].queryset = Task.objects.filter(project=self.instance.project).exclude(pk=self.instance.pk).select_related('project')
         else:
-            self.fields['dependencies'].queryset = Task.objects.all()
+            self.fields['dependencies'].queryset = Task.objects.all().select_related('project')[:100]
 
         # 3. Logic for Project and Assigned To (Role Based)
         instance_project = None
