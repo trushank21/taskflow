@@ -77,19 +77,48 @@ class TaskFilter(django_filters.FilterSet):
         #     profile__role='developer'
         # ).select_related('profile')
 
+        ##3-9-2026
+        # if user:
+        #     # 1. Filter Projects: Show only projects where user is lead or member
+        #     self.filters['project'].field.queryset = Project.objects.filter(
+        #         Q(team_lead=user) | Q(team_members=user)
+        #     ).distinct()
+
+        #     # 2. Filter Users: Show only people who share a project with the current user
+        #     # This prevents seeing every developer in the whole system
+        #     shared_projects = Project.objects.filter(
+        #         Q(team_lead=user) | Q(team_members=user)
+        #     ).distinct()
+
+        #     # Use the correct related_name identifiers found in your error message
+        #     self.filters['assigned_to'].field.queryset = User.objects.filter(
+        #         Q(projects_assigned__in=shared_projects) | 
+        #         Q(led_projects__in=shared_projects)
+        #     ).distinct().select_related('profile')
+        
         if user:
-            # 1. Filter Projects: Show only projects where user is lead or member
+        # Get the user's role from the profile
+        user_role = getattr(user.profile, 'role', 'developer')
+
+        # 1. Logic for Projects Dropdown
+        if user_role in ['observer', 'admin']:
+            # Observers and Admins see EVERY project in the filter
+            self.filters['project'].field.queryset = Project.objects.all()
+        else:
+            # Developers/Managers only see their own projects
             self.filters['project'].field.queryset = Project.objects.filter(
                 Q(team_lead=user) | Q(team_members=user)
             ).distinct()
 
-            # 2. Filter Users: Show only people who share a project with the current user
-            # This prevents seeing every developer in the whole system
-            shared_projects = Project.objects.filter(
-                Q(team_lead=user) | Q(team_members=user)
-            ).distinct()
-
-            # Use the correct related_name identifiers found in your error message
+        # 2. Logic for Assigned To Dropdown
+        if user_role in ['observer', 'admin']:
+            # Observers/Admins can see all developers
+            self.filters['assigned_to'].field.queryset = User.objects.filter(
+                profile__role='developer'
+            ).select_related('profile')
+        else:
+            # Restricted users only see teammates from shared projects
+            shared_projects = self.filters['project'].field.queryset
             self.filters['assigned_to'].field.queryset = User.objects.filter(
                 Q(projects_assigned__in=shared_projects) | 
                 Q(led_projects__in=shared_projects)
