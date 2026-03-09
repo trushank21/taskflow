@@ -91,6 +91,61 @@
                 </div>
             </div>
 
+
+            <div class="card-custom mb-4 shadow-sm border-top border-4 border-warning">
+                <h6 class="fw-bold mb-3 text-uppercase small text-muted d-flex align-items-center">
+                    <i class="fas fa-link me-2 text-warning"></i>Workflow Dependencies
+                </h6>
+            
+                <div class="row g-3">
+                    <div class="col-md-6 border-end">
+                        <label class="tiny-label text-muted text-uppercase fw-bold mb-2 d-block" style="font-size: 10px;">Waiting For</label>
+                        <div class="dependency-list">
+                            {% for dep in task.dependencies.all %}
+                                <div class="d-flex align-items-center mb-2 p-2 bg-light rounded-2 border">
+                                    <i class="fas fa-arrow-alt-circle-right text-warning me-2"></i>
+                                    <div class="overflow-hidden">
+                                        <a href="{% url 'tasks:task_detail' dep.pk %}" class="small fw-bold text-dark text-decoration-none d-block text-truncate">
+                                            {{ dep.title }}
+                                        </a>
+                                        <span class="badge {% if dep.status == 'completed' %}bg-success{% else %}bg-secondary{% endif %}" style="font-size: 8px;">
+                                            {{ dep.get_status_display }}
+                                        </span>
+                                    </div>
+                                </div>
+                            {% empty %}
+                                <p class="small text-muted italic mb-0">No dependencies.</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+            
+                    <div class="col-md-6 ps-3">
+                        <label class="tiny-label text-muted text-uppercase fw-bold mb-2 d-block" style="font-size: 10px;">Blocking Next Steps</label>
+                        <div class="dependency-list">
+                            {% for blocked in task.blocked_tasks.all %}
+                                <div class="d-flex align-items-center mb-2 p-2 bg-light rounded-2 border">
+                                    <i class="fas fa-exclamation-triangle text-danger me-2"></i>
+                                    <a href="{% url 'tasks:task_detail' blocked.pk %}" class="small fw-bold text-dark text-decoration-none text-truncate">
+                                        {{ blocked.title }}
+                                    </a>
+                                </div>
+                            {% empty %}
+                                <p class="small text-muted italic mb-0">Not blocking any tasks.</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            
+                {% if task.dependency_remark %}
+                <div class="mt-3 p-3 bg-warning bg-opacity-10 border border-warning-subtle rounded-3">
+                    <label class="tiny-label text-warning text-uppercase fw-bold d-block mb-1" style="font-size: 9px;">Dependency Remark</label>
+                    <p class="small text-dark mb-0 italic">"{{ task.dependency_remark }}"</p>
+                </div>
+                {% endif %}
+            </div>
+
+            
+
             <div class="card-custom mb-4 bg-light border-0 shadow-sm overflow-hidden">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h6 class="fw-bold mb-0 text-uppercase small text-muted">Progress Tracking</h6>
@@ -1097,6 +1152,13 @@ $(document).on('hidden.bs.modal', '.modal', function () {
     margin-bottom: 1.5rem;
 }
 
+    .bg-warning-subtle { background-color: #fffbeb; }
+    .text-warning { color: #d97706 !important; }
+    .border-warning-subtle { border-color: #fef3c7 !important; }
+    .tiny-label { letter-spacing: 1px; }
+    .italic { font-style: italic; }
+        
+    
 .timeline-marker {
     position: absolute;
     left: -20px;
