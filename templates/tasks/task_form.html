@@ -407,20 +407,33 @@ document.getElementById('id_project').addEventListener('change', function() {
         });
 });
 
+$(document).ready(function() {
+    // Initialize Select2 for professional multi-select look
+    $('.select2').select2({
+        theme: 'bootstrap-5',
+        width: '100%'
+    });
 
-$('#id_filter_projects').on('change', function() {
+    const $filterProjects = $('#id_filter_projects');
+    const $dependencySelect = $('#id_dependencies');
+    const currentTaskId = "{{ form.instance.pk|default:'' }}";
+
+    // When "Step 1: Filter Projects" changes
+    $filterProjects.on('change', function() {
         const projectIds = $(this).val();
-        const $dependencySelect = $('#id_dependencies');
 
         if (!projectIds || projectIds.length === 0) {
-            return; // Or clear the list
+            return; // Don't clear immediately to allow user to re-select
         }
 
         $.ajax({
             url: "{% url 'tasks:get_tasks_by_projects' %}",
-            data: { 'project_ids[]': projectIds },
+            data: { 
+                'project_ids[]': projectIds,
+                'current_task_id': currentTaskId 
+            },
             success: function(data) {
-                // Keep currently selected values so we don't wipe them
+                // Save what is currently selected so we don't wipe user progress
                 const currentSelections = $dependencySelect.val() || [];
                 
                 $dependencySelect.empty();
@@ -436,6 +449,7 @@ $('#id_filter_projects').on('change', function() {
         });
     });
 });
+
     
 
 </script>
