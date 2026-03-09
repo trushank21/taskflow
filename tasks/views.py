@@ -33,7 +33,16 @@ cloudinary.config(
 from django.template.loader import render_to_string
 from django.http import JsonResponse
 
-
+def get_tasks_by_projects(request):
+    project_ids = request.GET.getlist('project_ids[]')
+    # Filter tasks assigned to the user OR tasks in selected projects
+    tasks = Task.objects.filter(project_id__in=project_ids).values('id', 'title', 'project__title')
+    
+    task_list = [
+        {'id': t['id'], 'text': f"({t['project__title']}) {t['title']}"} 
+        for t in tasks
+    ]
+    return JsonResponse({'tasks': task_list})
 
 
 @login_required
