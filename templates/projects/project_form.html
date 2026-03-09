@@ -45,6 +45,25 @@
                             {% endif %}
                         </div>
 
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold text-dark d-block">Project Theme Color</label>
+                            <div class="d-flex flex-wrap gap-2 p-2 bg-light rounded-3 border">
+                                {% for radio in form.color %}
+                                    <div class="color-selector">
+                                        {{ radio.tag }}
+                                        <label for="{{ radio.id_for_label }}" 
+                                               style="background-color: {{ radio.choice_label }};" 
+                                               title="{{ radio.choice_label }}">
+                                        </label>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            {% if form.color.errors %}
+                                <div class="invalid-feedback d-block">{{ form.color.errors.0 }}</div>
+                            {% endif %}
+                            <div class="form-text small">Pick a color to distinguish this project's tasks and Excel CR numbers.</div>
+                        </div>
+
                         <h6 class="text-primary fw-bold text-uppercase small mt-5 mb-4 pb-2 border-bottom">
                             <i class="fas fa-users me-2"></i>Resource Allocation
                         </h6>
@@ -133,6 +152,46 @@
         padding: 10px;
     }
 
+
+
+    /* Hide the actual radio button */
+.color-selector input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+/* Style the color circle */
+.color-selector label {
+    display: block;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 3px solid white; /* Creates a 'ring' effect */
+    box-shadow: 0 0 0 1px #e5e7eb; /* Subtle outer border */
+    transition: all 0.2s ease-in-out;
+    margin-bottom: 0; /* Reset bootstrap margin */
+}
+
+/* Hover effect */
+.color-selector label:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* Selection effect: Thick border and scale */
+.color-selector input[type="radio"]:checked + label {
+    transform: scale(1.15);
+    box-shadow: 0 0 0 2px #3b82f6; /* Blue ring around selected color */
+}
+
+
+
+
+
+    
     /* Column divider for larger screens */
     @media (min-width: 768px) {
         .border-end-md {
