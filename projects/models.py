@@ -12,7 +12,15 @@ class Project(models.Model):
         ('completed', 'Completed'),
         ('on_hold', 'On Hold'),
     )
-    color = models.CharField(max_length=7, default="#6c757d")
+    COLOR_CHOICES = [
+        ('#FF5733', 'Sunrise Orange'),
+        ('#33FF57', 'Neon Green'),
+        ('#3357FF', 'Electric Blue'),
+        ('#F333FF', 'Vibrant Purple'),
+        ('#FF33A8', 'Hot Pink'),
+        ('#33FFF5', 'Cyan'),
+    ]
+    color = models.CharField(max_length=7,choices=COLOR_CHOICES,default='#3357FF')
     title = models.CharField(max_length=200, unique=True)
     description = models.TextField(blank=True, null=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
