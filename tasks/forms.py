@@ -125,25 +125,39 @@ class TaskForm(forms.ModelForm):
         from django.contrib.auth.models import User
         
         # 1. Initialize Filter Projects field based on user access
+        # if self.user:
+        #     if self.user.is_superuser or self.user.profile.role in ['admin', 'manager', 'observer']:
+        #         self.fields['filter_projects'].queryset = Project.objects.all().order_by('title')
+        #         self.fields['project'].queryset = Project.objects.all().order_by('title')
+        #     else:
+        #         self.fields['filter_projects'].queryset = Project.objects.filter(team_members=self.user).order_by('title')
+        #         self.fields['project'].queryset = Project.objects.filter(team_members=self.user).order_by('title')
+
         if self.user:
-            if self.user.is_superuser or self.user.profile.role in ['admin', 'manager', 'observer']:
-                self.fields['filter_projects'].queryset = Project.objects.all().order_by('title')
-                self.fields['project'].queryset = Project.objects.all().order_by('title')
+            is_privileged = self.user.is_superuser or self.user.profile.role in ['admin', 'manager', 'observer']
+            
+            if is_privileged:
+                # Observers see ALL projects, just like Admins
+                project_qs = Project.objects.all().order_by('title')
             else:
-                self.fields['filter_projects'].queryset = Project.objects.filter(team_members=self.user).order_by('title')
-                self.fields['project'].queryset = Project.objects.filter(team_members=self.user).order_by('title')
+                # Developers only see projects they are assigned to
+                project_qs = Project.objects.filter(team_members=self.user).order_by('title')
+            
+            self.fields['filter_projects'].queryset = project_qs
+            self.fields['project'].queryset = project_qs
                 
 
         # 2. Logic for Dependencies Queryset
         # If we are submitting data (POST), use the filter_projects selection
-        if self.data.getlist('filter_projects'):
-            p_ids = self.data.getlist('filter_projects')
-            self.fields['dependencies'].queryset = Task.objects.filter(project_id__in=p_ids).select_related('project')
-        # If we are editing an existing task, show tasks from its own project by default
+        filter_p_ids = self.data.getlist('filter_projects')
+        if filter_p_ids:
+            self.fields['dependencies'].queryset = Task.objects.filter(project_id__in=filter_p_ids).select_related('project')
+        # On Edit: default to showing tasks from the current project
         elif self.instance.pk:
             self.fields['dependencies'].queryset = Task.objects.filter(project=self.instance.project).exclude(pk=self.instance.pk).select_related('project')
         else:
-            self.fields['dependencies'].queryset = Task.objects.all().select_related('project')[:100]
+            # Default for creation: show recent tasks across projects for privileged users
+            self.fields['dependencies'].queryset = Task.objects.all().select_related('project')[:50]
 
         # 3. Logic for Project and Assigned To (Role Based)
         instance_project = None
