@@ -124,6 +124,29 @@
 
                 <div class="mb-5">
                     <h6 class="text-primary fw-bold text-uppercase small mb-4 pb-2 border-bottom">
+                        <i class="fas fa-link me-2"></i>Task Dependencies
+                    </h6>
+                    <div class="row g-4">
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label fw-semibold">Step 1: Select Projects to filter tasks</label>
+                            {{ form.filter_projects }}
+                        </div>
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label fw-semibold">Step 2: Select Dependent Tasks</label>
+                            {{ form.dependencies }}
+                            <div class="form-text">Choose tasks that must be finished first.</div>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label fw-semibold">Dependency Remark</label>
+                            {{ form.dependency_remark }}
+                        </div>
+                    </div>
+                </div>
+
+
+
+                <div class="mb-5">
+                    <h6 class="text-primary fw-bold text-uppercase small mb-4 pb-2 border-bottom">
                         <i class="fas fa-calendar-alt me-2"></i>Timeline & Metrics
                     </h6>
                     <div class="row g-4 mb-4">
@@ -384,6 +407,36 @@ document.getElementById('id_project').addEventListener('change', function() {
         });
 });
 
+
+$('#id_filter_projects').on('change', function() {
+        const projectIds = $(this).val();
+        const $dependencySelect = $('#id_dependencies');
+
+        if (!projectIds || projectIds.length === 0) {
+            return; // Or clear the list
+        }
+
+        $.ajax({
+            url: "{% url 'tasks:get_tasks_by_projects' %}",
+            data: { 'project_ids[]': projectIds },
+            success: function(data) {
+                // Keep currently selected values so we don't wipe them
+                const currentSelections = $dependencySelect.val() || [];
+                
+                $dependencySelect.empty();
+                
+                data.tasks.forEach(function(task) {
+                    const isSelected = currentSelections.includes(task.id.toString());
+                    const newOption = new Option(task.text, task.id, isSelected, isSelected);
+                    $dependencySelect.append(newOption);
+                });
+                
+                $dependencySelect.trigger('change');
+            }
+        });
+    });
+});
+    
 
 </script>
 {% endblock %}
