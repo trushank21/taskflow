@@ -61,7 +61,7 @@
                     </td>
                     <td>
                         <div class="d-flex align-items-center">
-                            <i class="fas fa-lock text-muted me-2 small"></i>
+                            <!-- <i class="fas fa-lock text-muted me-2 small"></i> -->
                             <div>
                                 <a href="{% url 'tasks:task_detail' task.pk %}" class="d-block fw-bold text-muted text-decoration-none mb-0">{{ task.title }}</a>
                                 <span class="badge-pro {% if task.priority == 'high' %}bg-high{% else %}bg-progress{% endif %}" style="font-size: 9px; padding: 1px 6px;">
