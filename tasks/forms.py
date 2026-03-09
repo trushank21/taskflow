@@ -20,7 +20,7 @@ class TaskForm(forms.ModelForm):
     days = forms.DecimalField(
                     max_digits=5, 
                     decimal_places=2, 
-                    widget=forms.NumberInput(attrs={'step': '0.1', 'min': '0.1'})
+                    widget=forms.NumberInput(attrs={'step': '0.1', 'min': '0.1','class':'form-control'})
                 )
     
     filter_projects = forms.ModelMultipleChoiceField(
