@@ -22,6 +22,18 @@ class Task(models.Model):
         ('high', 'High'),
         ('urgent', 'Urgent'),
     )
+    dependencies = models.ManyToManyField(
+        'self', 
+        symmetrical=False, 
+        blank=True, 
+        related_name='blocked_tasks',
+        help_text="Tasks that must be completed before this task can start."
+    )
+    dependency_remark = models.TextField(
+        blank=True, 
+        null=True, 
+        help_text="Reason for the dependency (e.g., 'Waiting for Task 6 API')"
+    )
     days = models.DecimalField(max_digits=5, decimal_places=2, default=0.1)
     change_request_no = models.CharField(max_length=50, blank=True, null=True)
     change_request_type = models.CharField(
