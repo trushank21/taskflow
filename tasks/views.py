@@ -328,13 +328,13 @@ class TaskListView(LoginRequiredMixin, FilterView):
     filterset_class = TaskFilter
     paginate_by = 10
 
-    def __init__(self, *args, **kwargs):
-        user = kwargs.pop('user', None) # Pass user from the view
-        super().__init__(*args, **kwargs)
-        if user:
-            self.filters['project'].field.queryset = Project.objects.filter(
-                Q(team_members=user) | Q(team_lead=user)
-            ).distinct()
+    # def __init__(self, *args, **kwargs):
+    #     user = kwargs.pop('user', None) # Pass user from the view
+    #     super().__init__(*args, **kwargs)
+    #     if user:
+    #         self.filters['project'].field.queryset = Project.objects.filter(
+    #             Q(team_members=user) | Q(team_lead=user)
+    #         ).distinct()
 
     def get_queryset(self):
         user = self.request.user
@@ -381,7 +381,7 @@ class TaskListView(LoginRequiredMixin, FilterView):
             ).distinct()
             
         # 5. INTEGRATE FILTERS
-        self.filterset = self.filterset_class(self.request.GET, queryset=qs.order_by('-updated_at'))
+        self.filterset = self.filterset_class(self.request.GET, queryset=qs.order_by('-updated_at'),user=user)
         return self.filterset.qs
     
     def get_filterset_kwargs(self, filterset_class):
