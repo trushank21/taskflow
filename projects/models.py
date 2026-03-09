@@ -12,7 +12,7 @@ class Project(models.Model):
         ('completed', 'Completed'),
         ('on_hold', 'On Hold'),
     )
-    
+    color = models.CharField(max_length=7, default="#6c757d")
     title = models.CharField(max_length=200, unique=True)
     description = models.TextField(blank=True, null=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
