@@ -109,6 +109,21 @@ class TaskForm(forms.ModelForm):
                 'placeholder': 'Comma-separated tags (optional)'
             }),
         }
+
+    def clean_dependencies(self):
+        dependencies = self.cleaned_data.get('dependencies')
+        if self.instance.pk and dependencies:
+            if self.instance in dependencies:
+                raise forms.ValidationError("A task cannot depend on itself.")
+            
+            # Simple Circular Check: B depends on A, so A cannot depend on B.
+            for dep in dependencies:
+                if dep.dependencies.filter(pk=self.instance.pk).exists():
+                    raise forms.ValidationError(
+                        f"Circular dependency: '{dep.title}' already depends on this task."
+                    )
+        return dependencies
+    
     def clean_days(self):
         days = self.cleaned_data.get('days')
         if days is None:
@@ -149,16 +164,24 @@ class TaskForm(forms.ModelForm):
 
         # 2. Logic for Dependencies Queryset
         # If we are submitting data (POST), use the filter_projects selection
-        filter_p_ids = self.data.getlist('filter_projects')
-        if filter_p_ids:
-            self.fields['dependencies'].queryset = Task.objects.filter(project_id__in=filter_p_ids).select_related('project')
-        # On Edit: default to showing tasks from the current project
+        if self.data.getlist('dependencies'):
+            # Allow the specific IDs submitted to pass validation
+            dep_ids = self.data.getlist('dependencies')
+            self.fields['dependencies'].queryset = Task.objects.filter(id__in=dep_ids)
+        
+        # Else if we have filter_projects selected (AJAX context or re-render)
+        elif self.data.getlist('filter_projects'):
+            p_ids = self.data.getlist('filter_projects')
+            self.fields['dependencies'].queryset = Task.objects.filter(project_id__in=p_ids)
+            
+        # Else if we are editing an existing task
         elif self.instance.pk:
-            self.fields['dependencies'].queryset = Task.objects.filter(project=self.instance.project).exclude(pk=self.instance.pk).select_related('project')
+            self.fields['dependencies'].queryset = Task.objects.filter(
+                project=self.instance.project
+            ).exclude(pk=self.instance.pk)
+        
         else:
-            # Default for creation: show recent tasks across projects for privileged users
-            # self.fields['dependencies'].queryset = Task.objects.all().select_related('project')[:50]
-            self.fields['dependencies'].queryset = Task.objects.all().select_related('project')
+            self.fields['dependencies'].queryset = Task.objects.none()
             
 
         # 3. Logic for Project and Assigned To (Role Based)

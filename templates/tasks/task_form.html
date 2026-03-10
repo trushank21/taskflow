@@ -410,56 +410,59 @@ document.getElementById('id_project').addEventListener('change', function() {
 
 
 
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script>
 $(document).ready(function() {
-    // 1. Initialize Select2
-    const $dependencySelect = $('#id_dependencies').select2({
-        theme: 'bootstrap-5',
-        width: '100%',
-        placeholder: "Select projects first to see tasks..."
-    });
-
-    const $filterProjects = $('#id_filter_projects').select2({
-        theme: 'bootstrap-5',
-        width: '100%',
-        placeholder: "Select projects to filter tasks"
-    });
-
+    const $dependencySelect = $('#id_dependencies');
+    const $filterProjects = $('#id_filter_projects');
     const currentTaskId = "{{ form.instance.pk|default:'' }}";
 
-    // --- FIX 1: Clear tasks on load if no projects are selected ---
-    if (!$filterProjects.val() || $filterProjects.val().length === 0) {
-        $dependencySelect.val(null).empty().trigger('change');
-    }
+    // 1. Initialize Select2 properly
+    $dependencySelect.select2({
+        placeholder: "Select tasks...",
+        width: '100%',
+        theme: 'bootstrap-5'
+    });
 
+    $filterProjects.select2({
+        placeholder: "Filter by projects...",
+        width: '100%',
+        theme: 'bootstrap-5'
+    });
+
+    // 2. Step 1 -> Step 2 Dependency Logic
     $filterProjects.on('change', function() {
-        const projectIds = $(this).val();
+        const projectIds = $(this).val(); 
+        
+        if (!projectIds || projectIds.length === 0) {
+            $dependencySelect.empty().trigger('change');
+            return;
+        }
 
-        // Always clear the tasks when project selection changes
-        $dependencySelect.val(null).empty().trigger('change'); 
-
-        if (!projectIds || projectIds.length === 0) return;
-
-        // AJAX to fetch tasks
         $.ajax({
             url: "{% url 'tasks:get_tasks_by_projects' %}",
             data: { 
-                project_ids: projectIds,
-                current_task_id: currentTaskId
+                'project_ids': projectIds, 
+                'current_task_id': currentTaskId
             },
+            traditional: true, 
             success: function(data) {
                 $dependencySelect.empty();
-        
-                if (data.tasks && data.tasks.length > 0) {
+                if (data.tasks) {
                     data.tasks.forEach(function(task) {
-                        const option = new Option(task.text, task.id, false, false);
-                        $dependencySelect.append(option);
+                        const newOption = new Option(task.text, task.id, false, false);
+                        $dependencySelect.append(newOption);
                     });
                 }
-        
-                $dependencySelect.trigger('change');
+                $dependencySelect.trigger('change'); 
             }
         });
     });
+
+    // ... Add the rest of your Project Member/Slider logic here ...
 });
 </script>
 {% endblock %}

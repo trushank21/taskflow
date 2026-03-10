@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.forms import ValidationError
 from projects.models import Project
 from cloudinary.models import CloudinaryField
 from django.db.models.signals import post_delete
@@ -74,13 +75,21 @@ class Task(models.Model):
         super().clean()
         if self.pk:
             # 1. Prevent self-dependency
-            if self in self.dependencies.all():
+            if self.dependencies.filter(pk=self.pk).exists():
                 raise ValidationError("A task cannot depend on itself.")
             
-            # 2. Prevent simple circular dependency (A -> B and B -> A)
-            for dep in self.dependencies.all():
-                if self in dep.dependencies.all():
-                    raise ValidationError(f"Circular dependency detected: {dep.title} already depends on this task.")
+            # 2. Prevent Recursive Circular Dependencies
+            # We check if any task this task wants to depend on 
+            # already considers THIS task a dependency somewhere in the chain.
+            def check_cycle(task, visited):
+                if task == self:
+                    return True
+                for dep in task.dependencies.all():
+                    if dep.pk not in visited:
+                        visited.add(dep.pk)
+                        if check_cycle(dep, visited):
+                            return True
+                return False
 
     def save(self, *args, **kwargs):
         self.full_clean()

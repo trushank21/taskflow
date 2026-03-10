@@ -33,24 +33,33 @@ cloudinary.config(
 from django.template.loader import render_to_string
 from django.http import JsonResponse
 
+
 def get_tasks_by_projects(request):
-    project_ids = request.GET.getlist('project_ids')
+    user = request.user
+    # If using traditional:true in JS, this should NOT have brackets
+    project_ids = request.GET.getlist('project_ids') 
     current_task_id = request.GET.get('current_task_id')
 
-    tasks = Task.objects.filter(project_id__in=project_ids)
+    if user.profile.role not in ['admin', 'manager', 'observer']:
+        allowed_projects = Project.objects.filter(
+            Q(team_lead=user) | Q(team_members=user)
+        ).values_list('id', flat=True)
+
+        project_ids = [pid for pid in project_ids if int(pid) in allowed_projects]
+
+    # Filter tasks. select_related('project') makes the {t.project.title} call efficient.
+    tasks = Task.objects.filter(project_id__in=project_ids).select_related('project')
 
     if current_task_id:
         tasks = tasks.exclude(id=current_task_id)
 
     data = {
         "tasks": [
-            {"id": t.id, "text": f"{t.title} ({t.project.title})"}
+            {"id": t.id, "text": f"{t.title} (Assigned to: {t.assigned_to.first_name if t.assigned_to else 'Unassigned'}) ({t.project.title})"}
             for t in tasks
         ]
     }
-
     return JsonResponse(data)
-
 # def get_tasks_by_projects(request):
 #     project_ids = request.GET.getlist('project_ids[]')
 #     current_task_id = request.GET.get('current_task_id')
@@ -425,6 +434,8 @@ class TaskDetailView(LoginRequiredMixin, DetailView):
         # Use prefetch_related for the related sets to avoid N+1 queries
         qs = Task.objects.select_related('project', 'assigned_to')
         qs = qs.prefetch_related(
+            'dependencies',    # Tasks this task is waiting for
+            'blocked_tasks',
             'comments__commented_by',
             'attachments__uploaded_by',
             'history__changed_by'
@@ -443,11 +454,13 @@ class TaskDetailView(LoginRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        task = self.get_object()
         # context['is_locked'] = self.object.project.status == 'inactive'
         if self.object.project:
             context['is_locked'] = self.object.project.status == 'inactive'
         else:
             context['is_locked'] = False
+        context['has_unmet_dependencies'] = task.dependencies.exclude(status='completed').exists()
         # context['comments'] = self.object.comments.select_related('commented_by').all()
         # context['attachments'] = self.object.attachments.select_related('uploaded_by').all()
         # We remove .select_related() because the data is already prefetched above.
