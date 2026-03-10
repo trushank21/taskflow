@@ -176,6 +176,9 @@ class TaskForm(forms.ModelForm):
             
         # Else if we are editing an existing task
         elif self.instance.pk:
+            linked_project_ids = self.instance.dependencies.values_list('project_id', flat=True).distinct()
+            self.initial['filter_projects'] = list(linked_project_ids)
+
             self.fields['dependencies'].queryset = Task.objects.filter(
                 project=self.instance.project
             ).exclude(pk=self.instance.pk)

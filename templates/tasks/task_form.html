@@ -126,18 +126,26 @@
                     <h6 class="text-primary fw-bold text-uppercase small mb-4 pb-2 border-bottom">
                         <i class="fas fa-link me-2"></i>Task Dependencies
                     </h6>
+                    
                     <div class="row g-4">
-                        <div class="col-md-12 mb-3">
-                            <label class="form-label fw-semibold">Step 1: Select Projects to filter tasks</label>
-                            {{ form.filter_projects }}
-                        </div>
-                        <div class="col-md-12 mb-3">
-                            <label class="form-label fw-semibold">Step 2: Select Dependent Tasks</label>
-                            {{ form.dependencies }}
-                            <div class="form-text">Choose tasks that must be finished first.</div>
-                        </div>
                         <div class="col-md-12">
-                            <label class="form-label fw-semibold">Dependency Remark</label>
+                            <label class="form-label fw-bold d-flex align-items-center">
+                                <span class="badge bg-primary me-2">1</span> Filter by Projects
+                            </label>
+                            {{ form.filter_projects }}
+                            <div class="form-text small">Select projects to see their specific tasks in step 2.</div>
+                        </div>
+
+                        <div class="col-md-12">
+                            <label class="form-label fw-bold d-flex align-items-center">
+                                <span class="badge bg-primary me-2">2</span> Select Dependent Tasks
+                            </label>
+                            {{ form.dependencies }}
+                            <div class="form-text small">Tasks selected here must be finished before this task can start.</div>
+                        </div>
+                        
+                        <div class="col-md-12">
+                            <label class="form-label fw-semibold text-muted small text-uppercase">Dependency Remark</label>
                             {{ form.dependency_remark }}
                         </div>
                     </div>
@@ -420,49 +428,142 @@ $(document).ready(function() {
     const $filterProjects = $('#id_filter_projects');
     const currentTaskId = "{{ form.instance.pk|default:'' }}";
 
-    // 1. Initialize Select2 properly
-    $dependencySelect.select2({
-        placeholder: "Select tasks...",
-        width: '100%',
-        theme: 'bootstrap-5'
-    });
+    // --- 1. Helper Functions ---
 
-    $filterProjects.select2({
-        placeholder: "Filter by projects...",
-        width: '100%',
-        theme: 'bootstrap-5'
-    });
+    // Fixed index: uses 1-based indexing and works for the first item
+    function getIndex(state) {
+        if (!state.id || !state.element) return '';
+        const index = $(state.element).index();
+        // Placeholder is usually at -1 or 0 depending on structure
+        // We ensure a valid positive number
+        return (index >= 0) ? `${index + 1}. ` : ''; 
+    }
 
-    // 2. Step 1 -> Step 2 Dependency Logic
-    $filterProjects.on('change', function() {
-        const projectIds = $(this).val(); 
-        
-        if (!projectIds || projectIds.length === 0) {
-            $dependencySelect.empty().trigger('change');
-            return;
-        }
-
-        $.ajax({
-            url: "{% url 'tasks:get_tasks_by_projects' %}",
-            data: { 
-                'project_ids': projectIds, 
-                'current_task_id': currentTaskId
-            },
-            traditional: true, 
-            success: function(data) {
-                $dependencySelect.empty();
-                if (data.tasks) {
-                    data.tasks.forEach(function(task) {
-                        const newOption = new Option(task.text, task.id, false, false);
-                        $dependencySelect.append(newOption);
-                    });
-                }
-                $dependencySelect.trigger('change'); 
+    // Colors the selected "pills" in the multi-select to match project colors
+    function colorizeSelections() {
+        $dependencySelect.next('.select2-container').find('.select2-selection__choice').each(function() {
+            const title = $(this).attr('title');
+            const $option = $dependencySelect.find(`option`).filter(function() {
+                return $(this).html() === title;
+            });
+            const color = $option.data('color');
+            if (color) {
+                $(this).css({
+                    'background-color': color + '20', // 20% opacity
+                    'color': color,
+                    'border-color': color,
+                    'font-weight': '500'
+                });
+                // Style the 'x' remove button
+                $(this).find('.select2-selection__choice__remove').css('color', color);
             }
         });
+    }
+
+    // --- 2. Formatters ---
+
+    function formatProjectOption(state) {
+        if (!state.id) return state.text;
+        const index = getIndex(state);
+        return $(`<span><strong class="me-1" style="color:#94a3b8">${index}</strong> ${state.text}</span>`);
+    }
+
+    function formatTaskOption(state) {
+        if (!state.id || !state.element) return state.text;
+
+        const index = getIndex(state);
+        const projectName = $(state.element).data('project') || 'No Project';
+        const projectColor = $(state.element).data('color') || '#6366f1';
+
+        return $(`
+            <div class="d-flex justify-content-between align-items-center w-100">
+                <span>
+                    <strong class="me-1" style="color:#94a3b8">${index}</strong>
+                    <span>${state.text}</span>
+                </span>
+                <span class="badge rounded-pill ms-2" 
+                      style="background-color: ${projectColor}20; color: ${projectColor}; border: 1px solid ${projectColor}; font-size: 10px; padding: 4px 8px;">
+                    ${projectName}
+                </span>
+            </div>
+        `);
+    }
+
+    // --- 3. Initialization ---
+
+    $filterProjects.select2({ 
+        placeholder: "Filter by projects...", 
+        width: '100%', 
+        theme: 'bootstrap-5',
+        templateResult: formatProjectOption,
+        templateSelection: formatProjectOption,
+        escapeMarkup: m => m
     });
 
-    // ... Add the rest of your Project Member/Slider logic here ...
+    $dependencySelect.select2({ 
+        placeholder: "Select tasks...", 
+        width: '100%', 
+        theme: 'bootstrap-5',
+        templateResult: formatTaskOption,
+        templateSelection: formatTaskOption,
+        escapeMarkup: m => m 
+    });
+
+    // Run colorization whenever the selection changes
+    $dependencySelect.on('change', colorizeSelections);
+
+    // --- 4. Logic & AJAX ---
+
+    function loadTasks(projectIds, selectionToPreserve = []) {
+        return $.ajax({
+            url: "{% url 'tasks:get_tasks_by_projects' %}",
+            data: { 'project_ids': projectIds, 'current_task_id': currentTaskId },
+            traditional: true
+        }).done(function(data) {
+            // Keep selected options to avoid UI flickering
+            $dependencySelect.find('option:not(:selected)').remove();
+
+            if (data.tasks) {
+                data.tasks.forEach(function(task) {
+                    if ($dependencySelect.find(`option[value='${task.id}']`).length === 0) {
+                        const newOption = new Option(task.text, task.id, false, false);
+                        $(newOption).attr('data-project', task.project_name)
+                                   .attr('data-color', task.project_color);
+                        $dependencySelect.append(newOption);
+                    }
+                });
+            }
+            $dependencySelect.val(selectionToPreserve).trigger('change.select2');
+            colorizeSelections(); // Final color pass
+        });
+    }
+
+    // Handle Initialization (Edit Mode)
+    const initialTaskIds = $dependencySelect.val() || [];
+    if (initialTaskIds.length > 0) {
+        $.ajax({
+            url: "{% url 'tasks:get_tasks_by_projects' %}",
+            data: { 'task_ids': initialTaskIds, 'get_project_ids': true },
+            traditional: true,
+            success: function(data) {
+                if (data.project_ids) {
+                    $filterProjects.val(data.project_ids).trigger('change.select2');
+                    loadTasks(data.project_ids, initialTaskIds);
+                }
+            }
+        });
+    }
+
+    // Change Listener for Step 1
+    $filterProjects.on('change', function() {
+        const projectIds = $(this).val();
+        const currentSelection = $dependencySelect.val() || [];
+        if (!projectIds || projectIds.length === 0) {
+            $dependencySelect.val(null).empty().trigger('change');
+            return;
+        }
+        loadTasks(projectIds, currentSelection);
+    });
 });
 </script>
 {% endblock %}

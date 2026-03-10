@@ -36,9 +36,17 @@ from django.http import JsonResponse
 
 def get_tasks_by_projects(request):
     user = request.user
+    get_project_ids = request.GET.get('get_project_ids')
+
+    if get_project_ids:
+        task_ids = request.GET.getlist('task_ids')
+        project_ids = list(Task.objects.filter(id__in=task_ids).values_list('project_id', flat=True).distinct())
+        return JsonResponse({'project_ids': project_ids})
+    
     # If using traditional:true in JS, this should NOT have brackets
     project_ids = request.GET.getlist('project_ids') 
     current_task_id = request.GET.get('current_task_id')
+    tasks = Task.objects.filter(project_id__in=project_ids).select_related('project')
 
     if user.profile.role not in ['admin', 'manager', 'observer']:
         allowed_projects = Project.objects.filter(
@@ -48,14 +56,18 @@ def get_tasks_by_projects(request):
         project_ids = [pid for pid in project_ids if int(pid) in allowed_projects]
 
     # Filter tasks. select_related('project') makes the {t.project.title} call efficient.
-    tasks = Task.objects.filter(project_id__in=project_ids).select_related('project')
+    
 
     if current_task_id:
         tasks = tasks.exclude(id=current_task_id)
 
     data = {
         "tasks": [
-            {"id": t.id, "text": f"{t.title} (Assigned to: {t.assigned_to.first_name if t.assigned_to else 'Unassigned'}) ({t.project.title})"}
+            {"id": t.id, 
+             "text": f"{t.title} (Assigned to: {t.assigned_to.first_name if t.assigned_to else 'Unassigned'}) ({t.project.title})",
+             "project_name": t.project.title,
+             "project_color": t.project.color if hasattr(t.project, 'color') else '#6366f1',
+             }
             for t in tasks
         ]
     }
