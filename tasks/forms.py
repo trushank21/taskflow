@@ -158,7 +158,8 @@ class TaskForm(forms.ModelForm):
         else:
             # Default for creation: show recent tasks across projects for privileged users
             # self.fields['dependencies'].queryset = Task.objects.all().select_related('project')[:50]
-            self.fields['dependencies'].queryset = Task.objects.none()
+            self.fields['dependencies'].queryset = Task.objects.all().select_related('project')
+            
 
         # 3. Logic for Project and Assigned To (Role Based)
         instance_project = None
