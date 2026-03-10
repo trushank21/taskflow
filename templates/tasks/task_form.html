@@ -410,25 +410,27 @@ document.getElementById('id_project').addEventListener('change', function() {
 
 
 
-    $(document).ready(function() {
-    // 1. Initialize Select2 (Ensure this happens first)
-    $('.select2').select2({
+$(document).ready(function() {
+    // 1. Initialize Select2
+    const $dependencySelect = $('#id_dependencies').select2({
         theme: 'bootstrap-5',
-        width: '100%'
+        width: '100%',
+        placeholder: "Select dependent tasks"
     });
 
     const $filterProjects = $('#id_filter_projects');
-    const $dependencySelect = $('#id_dependencies'); // This is the Select2 element
     const currentTaskId = "{{ form.instance.pk|default:'' }}";
 
     $filterProjects.on('change', function() {
         const projectIds = $(this).val();
 
         // --- THE CRITICAL FIX ---
-        // We must empty the options AND trigger a change so Select2 redraws
-        $dependencySelect.empty().trigger('change'); 
+        // 1. Clear the values selected
+        // 2. Empty the options
+        // 3. Trigger change so Select2 UI resets to blank immediately
+        $dependencySelect.val(null).empty().trigger('change'); 
 
-        // If no project is selected, we stop here with an empty list
+        // If no project is selected, stop here
         if (!projectIds || projectIds.length === 0) {
             return; 
         }
@@ -440,21 +442,24 @@ document.getElementById('id_project').addEventListener('change', function() {
                 'current_task_id': currentTaskId 
             },
             success: function(data) {
-                // Now we rebuild the list from the AJAX response
+                // Rebuild the list
                 if (data.tasks && data.tasks.length > 0) {
                     data.tasks.forEach(function(task) {
+                        // Create option: new Option(text, id, defaultSelected, selected)
                         const newOption = new Option(task.text, task.id, false, false);
                         $dependencySelect.append(newOption);
                     });
                 }
                 
-                // Tell Select2 to show the new tasks (or stay empty if 0 tasks)
+                // Refresh Select2 to show the new options
                 $dependencySelect.trigger('change');
+            },
+            error: function() {
+                console.error("Failed to fetch tasks for dependencies.");
             }
         });
     });
 });
-
     
 
 </script>
