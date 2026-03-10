@@ -35,7 +35,13 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'your-secret-key-change-in-production')
 # DEBUG = os.getenv('DEBUG', True)
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = ['taskflow-xxx.onrender.com', 'localhost', '127.0.0.1']
+# ALLOWED_HOSTS = ['taskflow-xxx.onrender.com', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = [
+    'taskflow-uih5.onrender.com', 
+    '127.0.0.1', 
+    'localhost',
+    '.onrender.com'  # This wildcard allows any subdomain on onrender.com
+]
 # ALLOWED_HOSTS = ['*']
 
 
