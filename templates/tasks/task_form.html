@@ -415,21 +415,26 @@ $(document).ready(function() {
     const $dependencySelect = $('#id_dependencies').select2({
         theme: 'bootstrap-5',
         width: '100%',
-        placeholder: "Select dependent tasks"
+        placeholder: "Select projects first to see tasks..."
     });
 
     const $filterProjects = $('#id_filter_projects').select2({
         theme: 'bootstrap-5',
         width: '100%',
-        placeholder: "Select projects to filter..."
+        placeholder: "Select projects to filter tasks"
     });
 
     const currentTaskId = "{{ form.instance.pk|default:'' }}";
 
+    // --- FIX 1: Clear tasks on load if no projects are selected ---
+    if (!$filterProjects.val() || $filterProjects.val().length === 0) {
+        $dependencySelect.val(null).empty().trigger('change');
+    }
+
     $filterProjects.on('change', function() {
         const projectIds = $(this).val();
 
-        // Clear UI and data
+        // Always clear the tasks when project selection changes
         $dependencySelect.val(null).empty().trigger('change'); 
 
         if (!projectIds || projectIds.length === 0) return;
@@ -448,7 +453,6 @@ $(document).ready(function() {
                         $dependencySelect.append(newOption);
                     });
                 }
-                // Refresh Select2
                 $dependencySelect.trigger('change');
             }
         });
