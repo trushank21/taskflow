@@ -430,16 +430,14 @@ $(document).ready(function() {
 
     // --- 1. Helper Functions ---
 
-    // Fixed index: uses 1-based indexing and works for the first item
+    // Fixed index: uses 1-based indexing
     function getIndex(state) {
         if (!state.id || !state.element) return '';
         const index = $(state.element).index();
-        // Placeholder is usually at -1 or 0 depending on structure
-        // We ensure a valid positive number
         return (index >= 0) ? `${index + 1}. ` : ''; 
     }
 
-    // Colors the selected "pills" in the multi-select to match project colors
+    // Colors the selected multi-select tags (pills) to match project colors
     function colorizeSelections() {
         $dependencySelect.next('.select2-container').find('.select2-selection__choice').each(function() {
             const title = $(this).attr('title');
@@ -449,12 +447,11 @@ $(document).ready(function() {
             const color = $option.data('color');
             if (color) {
                 $(this).css({
-                    'background-color': color + '20', // 20% opacity
+                    'background-color': color + '20',
                     'color': color,
                     'border-color': color,
                     'font-weight': '500'
                 });
-                // Style the 'x' remove button
                 $(this).find('.select2-selection__choice__remove').css('color', color);
             }
         });
@@ -509,18 +506,29 @@ $(document).ready(function() {
         escapeMarkup: m => m 
     });
 
-    // Run colorization whenever the selection changes
+    // CRITICAL: Clear Step 2 if Step 1 is empty on load (prevents "No Project" tasks)
+    const initialProjects = $filterProjects.val();
+    if (!initialProjects || initialProjects.length === 0) {
+        $dependencySelect.empty().trigger('change.select2');
+    }
+
     $dependencySelect.on('change', colorizeSelections);
 
     // --- 4. Logic & AJAX ---
 
     function loadTasks(projectIds, selectionToPreserve = []) {
+        // Prevent AJAX if no projects are selected
+        if (!projectIds || projectIds.length === 0) {
+            $dependencySelect.empty().trigger('change.select2');
+            return;
+        }
+
         return $.ajax({
             url: "{% url 'tasks:get_tasks_by_projects' %}",
             data: { 'project_ids': projectIds, 'current_task_id': currentTaskId },
             traditional: true
         }).done(function(data) {
-            // Keep selected options to avoid UI flickering
+            // Keep selected options so we don't lose the user's current choice
             $dependencySelect.find('option:not(:selected)').remove();
 
             if (data.tasks) {
@@ -534,11 +542,11 @@ $(document).ready(function() {
                 });
             }
             $dependencySelect.val(selectionToPreserve).trigger('change.select2');
-            colorizeSelections(); // Final color pass
+            colorizeSelections();
         });
     }
 
-    // Handle Initialization (Edit Mode)
+    // Handle Edit Mode: Load existing dependencies and their projects
     const initialTaskIds = $dependencySelect.val() || [];
     if (initialTaskIds.length > 0) {
         $.ajax({
@@ -554,12 +562,13 @@ $(document).ready(function() {
         });
     }
 
-    // Change Listener for Step 1
+    // Step 1 Change Listener
     $filterProjects.on('change', function() {
         const projectIds = $(this).val();
         const currentSelection = $dependencySelect.val() || [];
+        
         if (!projectIds || projectIds.length === 0) {
-            $dependencySelect.val(null).empty().trigger('change');
+            $dependencySelect.val(null).empty().trigger('change.select2');
             return;
         }
         loadTasks(projectIds, currentSelection);

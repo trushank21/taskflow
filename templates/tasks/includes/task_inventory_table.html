@@ -63,7 +63,7 @@
                         <div class="d-flex align-items-center">
                             <!-- <i class="fas fa-lock text-muted me-2 small"></i> -->
                             <div>
-                                <a href="{% url 'tasks:task_detail' task.pk %}" class="d-block fw-bold text-muted text-decoration-none mb-0">{{ task.title }}</a>
+                                <a href="{% url 'tasks:task_detail' task.pk %}" class="d-block fw-bold text-muted text-decoration-none mb-0">{{ task.title|truncatechars:40 }}</a>
                                 <span class="badge-pro {% if task.priority == 'high' %}bg-high{% else %}bg-progress{% endif %}" style="font-size: 9px; padding: 1px 6px;">
                                     {{ task.get_priority_display }}
                                 </span>
@@ -148,7 +148,7 @@
                         </span>
                     </td>
                     <td>
-                        <a href="{% url 'tasks:task_detail' task.pk %}" class="d-block fw-bold text-dark text-decoration-none mb-0">{{ task.title }}</a>
+                        <a href="{% url 'tasks:task_detail' task.pk %}" class="d-block fw-bold text-dark text-decoration-none mb-0" style="max-width: 220px;">{{ task.title|truncatechars:40 }}</a>
                         <span class="badge-pro {% if task.priority == 'high' %}bg-high{% else %}bg-progress{% endif %}" style="font-size: 9px; padding: 1px 6px;">
                             {{ task.get_priority_display }}
                         </span>
