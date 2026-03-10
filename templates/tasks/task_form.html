@@ -409,17 +409,26 @@ document.getElementById('id_project').addEventListener('change', function() {
 
 
 
+
     $(document).ready(function() {
+    // 1. Initialize Select2 (Ensure this happens first)
+    $('.select2').select2({
+        theme: 'bootstrap-5',
+        width: '100%'
+    });
+
     const $filterProjects = $('#id_filter_projects');
-    const $dependencySelect = $('#id_dependencies');
+    const $dependencySelect = $('#id_dependencies'); // This is the Select2 element
     const currentTaskId = "{{ form.instance.pk|default:'' }}";
 
     $filterProjects.on('change', function() {
         const projectIds = $(this).val();
 
-        // --- ADD THIS LINE TO CLEAR OLD TASKS IMMEDIATELY ---
+        // --- THE CRITICAL FIX ---
+        // We must empty the options AND trigger a change so Select2 redraws
         $dependencySelect.empty().trigger('change'); 
 
+        // If no project is selected, we stop here with an empty list
         if (!projectIds || projectIds.length === 0) {
             return; 
         }
@@ -431,13 +440,15 @@ document.getElementById('id_project').addEventListener('change', function() {
                 'current_task_id': currentTaskId 
             },
             success: function(data) {
-                // If the project has 0 tasks, data.tasks will be empty
-                // and the list remains empty as it should.
-                data.tasks.forEach(function(task) {
-                    const newOption = new Option(task.text, task.id, false, false);
-                    $dependencySelect.append(newOption);
-                });
+                // Now we rebuild the list from the AJAX response
+                if (data.tasks && data.tasks.length > 0) {
+                    data.tasks.forEach(function(task) {
+                        const newOption = new Option(task.text, task.id, false, false);
+                        $dependencySelect.append(newOption);
+                    });
+                }
                 
+                // Tell Select2 to show the new tasks (or stay empty if 0 tasks)
                 $dependencySelect.trigger('change');
             }
         });
