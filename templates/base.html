@@ -349,7 +349,7 @@ body.modal-open {
                 <i class="fas fa-tasks"></i> Tasks
             </a>
 
-            {% if user.profile.role == 'admin' or user.profile.role == 'manager' or user.profile.role != 'observer' %}
+            {% if user.profile.role == 'admin' or user.profile.role == 'manager' or user.profile.role not in 'observer,developer'  %}
             <hr class="text-muted opacity-25 mx-3">
             <div class="px-3 mb-2 small text-uppercase fw-bold text-muted" style="font-size: 0.7rem; letter-spacing: 1px;">Management</div>
             
