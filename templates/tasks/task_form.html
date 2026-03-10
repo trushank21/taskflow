@@ -407,23 +407,21 @@ document.getElementById('id_project').addEventListener('change', function() {
         });
 });
 
-$(document).ready(function() {
-    // Initialize Select2 for professional multi-select look
-    $('.select2').select2({
-        theme: 'bootstrap-5',
-        width: '100%'
-    });
 
+
+    $(document).ready(function() {
     const $filterProjects = $('#id_filter_projects');
     const $dependencySelect = $('#id_dependencies');
     const currentTaskId = "{{ form.instance.pk|default:'' }}";
 
-    // When "Step 1: Filter Projects" changes
     $filterProjects.on('change', function() {
         const projectIds = $(this).val();
 
+        // --- ADD THIS LINE TO CLEAR OLD TASKS IMMEDIATELY ---
+        $dependencySelect.empty().trigger('change'); 
+
         if (!projectIds || projectIds.length === 0) {
-            return; // Don't clear immediately to allow user to re-select
+            return; 
         }
 
         $.ajax({
@@ -433,14 +431,10 @@ $(document).ready(function() {
                 'current_task_id': currentTaskId 
             },
             success: function(data) {
-                // Save what is currently selected so we don't wipe user progress
-                const currentSelections = $dependencySelect.val() || [];
-                
-                $dependencySelect.empty();
-                
+                // If the project has 0 tasks, data.tasks will be empty
+                // and the list remains empty as it should.
                 data.tasks.forEach(function(task) {
-                    const isSelected = currentSelections.includes(task.id.toString());
-                    const newOption = new Option(task.text, task.id, isSelected, isSelected);
+                    const newOption = new Option(task.text, task.id, false, false);
                     $dependencySelect.append(newOption);
                 });
                 
