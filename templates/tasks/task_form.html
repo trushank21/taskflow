@@ -411,18 +411,17 @@ document.getElementById('id_project').addEventListener('change', function() {
 
 
 $(document).ready(function() {
-    // 1. Initialize Select2 on the dependency field
+    // 1. Initialize Select2
     const $dependencySelect = $('#id_dependencies').select2({
         theme: 'bootstrap-5',
         width: '100%',
         placeholder: "Select dependent tasks"
     });
 
-    // Initialize Select2 on the project filter field
     const $filterProjects = $('#id_filter_projects').select2({
         theme: 'bootstrap-5',
         width: '100%',
-        placeholder: "Search projects..."
+        placeholder: "Select projects to filter..."
     });
 
     const currentTaskId = "{{ form.instance.pk|default:'' }}";
@@ -430,16 +429,12 @@ $(document).ready(function() {
     $filterProjects.on('change', function() {
         const projectIds = $(this).val();
 
-        // --- CRITICAL FIX: Fully clear Select2 state ---
+        // Clear UI and data
         $dependencySelect.val(null).empty().trigger('change'); 
 
-        if (!projectIds || projectIds.length === 0) {
-            return; 
-        }
+        if (!projectIds || projectIds.length === 0) return;
 
-        // Optional: Show a loading state
-        $dependencySelect.append(new Option("Loading tasks...", "", false, false)).trigger('change');
-
+        // AJAX to fetch tasks
         $.ajax({
             url: "{% url 'tasks:get_tasks_by_projects' %}",
             data: { 
@@ -447,28 +442,17 @@ $(document).ready(function() {
                 'current_task_id': currentTaskId 
             },
             success: function(data) {
-                $dependencySelect.empty(); // Clear "Loading..." message
-
                 if (data.tasks && data.tasks.length > 0) {
                     data.tasks.forEach(function(task) {
                         const newOption = new Option(task.text, task.id, false, false);
                         $dependencySelect.append(newOption);
                     });
-                } else {
-                    const noData = new Option("No tasks found in these projects", "", false, false);
-                    $(noData).prop('disabled', true);
-                    $dependencySelect.append(noData);
                 }
-                
-                // Trigger change to tell Select2 to redraw the dropdown list
+                // Refresh Select2
                 $dependencySelect.trigger('change');
-            },
-            error: function() {
-                $dependencySelect.empty().append(new Option("Error fetching tasks", "", false, false)).trigger('change');
             }
         });
     });
 });
-
 </script>
 {% endblock %}
