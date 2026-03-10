@@ -443,16 +443,19 @@ $(document).ready(function() {
         $.ajax({
             url: "{% url 'tasks:get_tasks_by_projects' %}",
             data: { 
-                'project_ids[]': projectIds,
-                'current_task_id': currentTaskId 
+                project_ids: projectIds,
+                current_task_id: currentTaskId
             },
             success: function(data) {
+                $dependencySelect.empty();
+        
                 if (data.tasks && data.tasks.length > 0) {
                     data.tasks.forEach(function(task) {
-                        const newOption = new Option(task.text, task.id, false, false);
-                        $dependencySelect.append(newOption);
+                        const option = new Option(task.text, task.id, false, false);
+                        $dependencySelect.append(option);
                     });
                 }
+        
                 $dependencySelect.trigger('change');
             }
         });
