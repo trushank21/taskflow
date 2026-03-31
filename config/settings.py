@@ -67,12 +67,13 @@ STORAGES = {
         "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
     },
     "staticfiles": {
+        "BACKEND": "whitenoise.storage.StaticFilesStorage",
         # "BACKEND": "whitenoise.storage.ManifestStaticFilesStorage",
-        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
+        # "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
     },
 }
-
-STATICFILES_STORAGE = "whitenoise.storage.CompressedStaticFilesStorage"
+STATICFILES_STORAGE = "whitenoise.storage.StaticFilesStorage"
+# STATICFILES_STORAGE = "whitenoise.storage.CompressedStaticFilesStorage"
 
 # STATICFILES_STORAGE = "whitenoise.storage.ManifestStaticFilesStorage"
 # Add compression and caching support
@@ -81,7 +82,8 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedStaticFilesStorage"
 
 # Add this to help WhiteNoise ignore the "ghost" files causing the crash
 WHITENOISE_MANIFEST_STRICT = False
-
+WHITENOISE_KEEP_ONLY_HASHED_FILES = False
+WHITENOISE_AUTOREFRESH = True
 
 CLOUDINARY_STORAGE = {
     'CLOUD_NAME': os.getenv('CLOUDINARY_CLOUD_NAME'),
