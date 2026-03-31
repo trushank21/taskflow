@@ -181,12 +181,13 @@ if os.path.exists(CA_CERT_PATH):
         'ssl': {'ca': CA_CERT_PATH}
     }
 
-CACHES = {
-    "default": {
-        "BACKEND": "django_valkey.cache.ValkeyCache",
-        "LOCATION": os.getenv('REDIS_URL'),
-    }
-}
+# CACHES = {
+#     "default": {
+#         "BACKEND": "django_valkey.cache.ValkeyCache",
+#         "LOCATION": os.getenv('REDIS_URL'),
+#     }
+# }
+
 import ssl
 REDIS_URL = os.environ.get("REDIS_URL")
 CACHES = {
