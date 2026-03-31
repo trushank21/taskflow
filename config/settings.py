@@ -72,6 +72,8 @@ STORAGES = {
     },
 }
 
+STATICFILES_STORAGE = "whitenoise.storage.CompressedStaticFilesStorage"
+
 # STATICFILES_STORAGE = "whitenoise.storage.ManifestStaticFilesStorage"
 # Add compression and caching support
 # STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
