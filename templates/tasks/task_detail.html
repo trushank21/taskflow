@@ -749,6 +749,8 @@ $(document).on('hidden.bs.modal', '.modal', function () {
                         iconClass = 'fa-file-image text-success';
                     } else if (extension === 'pdf') {
                         iconClass = 'fa-file-pdf text-danger';
+                    }else if (['xlsx', 'xls', 'csv'].includes(extension)) {
+                        iconClass = 'fa-file-excel text-success'; // ICON FOR EXCEL
                     }
                     //const iconClass = (res.extension.includes('pdf')) ? 'fa-file-pdf text-danger' : 
                       //                (['jpg','jpeg','png','gif'].some(ext => res.extension.includes(ext))) ? 'fa-file-image text-success' : 'fa-file-alt text-primary';

@@ -505,4 +505,14 @@ class TaskAttachmentForm(forms.ModelForm):
                 'placeholder': 'File name'
             })
         }
+    
+    def clean_file(self):
+        file = self.cleaned_data.get('file')
+        if file:
+            ext = os.path.splitext(file.name)[1].lower()
+            # Explicitly allow Excel extensions
+            valid_extensions = ['.pdf', '.doc', '.docx', '.jpg', '.png', '.xlsx', '.xls', '.csv']
+            if ext not in valid_extensions:
+                raise forms.ValidationError(f"File type {ext} is not supported.")
+        return file
 
