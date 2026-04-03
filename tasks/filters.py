@@ -1,9 +1,12 @@
 import django_filters
-
+from django.db.models import Q
 from projects.models import Project
 from .models import Task
 
 class TaskFilter(django_filters.FilterSet):
+
+    q = django_filters.CharFilter(method='universal_search', label="Search")
+
     title = django_filters.CharFilter(
         field_name='title',
         lookup_expr='icontains',
@@ -61,7 +64,16 @@ class TaskFilter(django_filters.FilterSet):
 
     class Meta:
         model = Task
-        fields = ['title', 'project', 'status', 'priority', 'assigned_to', 'due_date', 'project_status']
+        fields = ['q','title', 'project', 'status', 'priority', 'assigned_to', 'due_date', 'project_status']
+    
+    def universal_search(self, queryset, name, value):
+        if value:
+            return queryset.filter(
+                Q(title__icontains=value) | 
+                Q(project__title__icontains=value) |
+                Q(change_request_no__icontains=value)
+            ).distinct()
+        return queryset
         
     def __init__(self, *args, **kwargs):
 

@@ -1,4 +1,231 @@
-<div class="table-responsive">
+{% if task.project.status == 'inactive' or request.user.profile.role == 'observer' or request.user.profile.role == 'developer' and task.assigned_to != request.user and task.project.team_lead != request.user %}
+    
+    {# --- LOCKED ROW LAYOUT (Read Only) --- #}
+    <tr id="task-row-{{ task.pk }}" class="bg-light-subtle opacity-75">
+        <td class="ps-4"><span class="small text-muted">{{ forloop.counter }}</span></td>
+        
+        <td><span class="badge bg-dark text-white font-monospace" style="font-size: 10px;">KU-ERP{{ task.display_id|stringformat:"03d" }}</span></td>
+        
+        <td>
+            <span class="badge font-monospace shadow-sm" style="font-size: 10px; background-color: {{ task.project.color }}; color: white; border: 1px solid rgba(0,0,0,0.1);">
+                {{ task.change_request_no|default:"CR" }}
+            </span>
+        </td>
+
+        <td>
+            {% if task.change_request_type == 'MAJOR' %}
+                <span class="text-danger fw-bold" style="font-size: 10px;">MAJOR</span>
+            {% else %}
+                <span class="text-info fw-bold" style="font-size: 10px;">MINOR</span>
+            {% endif %}
+        </td>
+        
+        {% if request.user.profile.role != 'observer' %}
+        <td>
+            <img src="https://ui-avatars.com/api/?name={{ task.assigned_to.username }}&background=6366f1&color=fff" class="rounded-circle grayscale-filter shadow-sm" width="24" height="24">
+        </td>
+        {% endif %}
+
+        <td>
+            <span class="badge bg-light text-primary border border-primary-subtle fw-bold">
+                {{ task.days|default:"0" }} <small class="text-muted" style="font-size: 9px;">Days</small>
+            </span>
+        </td>
+
+        <td>
+            <div>
+                <a href="{% url 'tasks:task_detail' task.pk %}" class="d-block fw-bold text-muted text-decoration-none mb-0">{{ task.title|truncatechars:35 }}</a>
+                <span class="badge {% if task.priority == 'high' %}bg-danger{% else %}bg-secondary{% endif %}" style="font-size: 8px;">{{ task.get_priority_display }}</span>
+            </div>
+        </td>
+
+        <td>
+            <span class="badge rounded-pill px-2 py-1 fw-bold shadow-sm" style="font-size: 10px; background-color: {{ task.project.color }}20; color: {{ task.project.color }}; border: 1px solid {{ task.project.color }}40;">
+                {{ task.project.title|truncatechars:15 }}
+            </span>
+        </td>
+
+
+        <td>
+    {% if task.project.status == 'inactive' or request.user.profile.role == 'observer' or request.user.profile.role == 'developer' and task.assigned_to != request.user and task.project.team_lead != request.user %}
+        
+        {# --- OBSERVER VIEW (Nice Soft UI) --- #}
+        <div class="status-badge-soft" 
+             style="background-color: {{ task.get_status_color }}15; 
+                    color: {{ task.get_status_color }}; 
+                    border: 1px solid {{ task.get_status_color }}30;">
+            {{ task.get_status_display }}
+        </div>
+
+    {% else %}
+
+        {# --- ADMIN VIEW (Matches Observer but is Clickable) --- #}
+        <div class="dropdown btn-status-toggle">
+            <button class="btn btn-sm p-0 border-0 shadow-none d-flex align-items-center" 
+                    type="button" data-bs-toggle="dropdown" aria-expanded="false" 
+                    style="background: transparent !important; box-shadow: none !important;">
+                
+                <span class="status-badge-soft" 
+                      style="background-color: {{ task.get_status_color }}15; 
+                             color: {{ task.get_status_color }}; 
+                             border: 1px solid {{ task.get_status_color }}30;">
+                    {{ task.get_status_display }}
+                    <i class="fas fa-chevron-down ms-1" style="font-size: 8px; opacity: 0.5;"></i>
+                </span>
+            </button>
+            
+            <ul class="dropdown-menu shadow-lg border-0 mt-1" style="font-size: 11px; border-radius: 8px;">
+                <li class="dropdown-header text-uppercase pb-1" style="font-size: 9px; opacity: 0.5;">Change Status</li>
+                {% for code, label in task.STATUS_CHOICES %}
+                    <li>
+                        <a class="dropdown-item status-update-link py-2 {% if task.status == code %}active{% endif %}" 
+                           href="#" 
+                           data-url="{% url 'tasks:update_status' task.pk %}" 
+                           data-pk="{{ task.pk }}" 
+                           data-value="{{ code }}">
+                            {{ label }}
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+</td>
+
+        <td><span class="small fw-medium text-muted">{{ task.due_date|date:"M d"|default:"TBD" }}</span></td>
+
+        <td>
+            <div class="d-flex align-items-center gap-2">
+                <input type="range" class="form-range" value="{{ task.progress }}" disabled>
+                <span class="small text-muted fw-bold" style="font-size: 10px; width: 30px;">{{ task.progress }}%</span>
+            </div>
+        </td>
+
+        <td class="pe-4 text-end">
+            <a href="{% url 'tasks:task_detail' task.pk %}" class="btn-action btn-detail"><i class="fas fa-eye"></i></a>
+        </td>
+    </tr>
+
+{% else %}
+
+    {# --- EDITABLE ROW LAYOUT (Active) --- #}
+    <tr id="task-row-{{ task.pk }}" class="{% if task.status == 'blocked' %}bg-danger bg-opacity-10{% endif %}">
+        <td class="ps-4"><span class="small text-muted">{{ forloop.counter }}</span></td>
+
+        <td><span class="badge bg-dark text-white font-monospace" style="font-size: 10px;">KU-ERP{{ task.display_id|stringformat:"03d" }}</span></td>
+
+        <td><span class="badge bg-dark text-white font-monospace" style="font-size: 10px;">{{ task.change_request_no|default:"CR" }}</span></td>
+
+        <td>
+            {% if task.change_request_type == 'MAJOR' %}
+                <span class="text-danger fw-bold" style="font-size: 10px;">MAJOR</span>
+            {% else %}
+                <span class="text-info fw-bold" style="font-size: 10px;">MINOR</span>
+            {% endif %}
+        </td>
+
+        {% if request.user.profile.role != 'observer' %}
+        <td>
+            <img src="https://ui-avatars.com/api/?name={{ task.assigned_to.username }}&background=6366f1&color=fff" class="rounded-circle shadow-sm" width="24" height="24">
+        </td>
+        {% endif %}
+
+        <td>
+            <span class="badge bg-light text-primary border border-primary-subtle fw-bold">
+                {{ task.days|default:"0" }} <small class="text-muted" style="font-size: 9px;">Days</small>
+            </span>
+        </td>
+
+        <td>
+            <a href="{% url 'tasks:task_detail' task.pk %}" class="d-block fw-bold text-dark text-decoration-none mb-0">{{ task.title|truncatechars:35 }}</a>
+            <span class="badge {% if task.priority == 'high' %}bg-danger{% else %}bg-primary{% endif %}" style="font-size: 8px;">{{ task.get_priority_display }}</span>
+        </td>
+
+        <td>
+            <span class="badge rounded-pill px-2 py-1 fw-bold" style="font-size: 10px; background: {{ task.project.color }}20; color: {{ task.project.color }}; border: 1px solid {{ task.project.color }}40;">
+                {{ task.project.title|truncatechars:15 }}
+            </span>
+        </td>
+
+        <td>
+            <div class="dropdown  btn-status-toggle">
+                <button type="button"
+                data-bs-toggle="dropdown"
+                class="p-0 border-0 bg-transparent d-inline-flex align-items-center"
+                style="all: unset; cursor: pointer;">
+
+            <span class="status-badge-soft status-text-{{ task.pk }}"
+                  style="background-color: {{ task.get_status_color }}15; 
+                         color: {{ task.get_status_color }}; 
+                         border: 1px solid {{ task.get_status_color }}30;">
+                {{ task.get_status_display }}
+                <i class="fas fa-chevron-down ms-1"
+       style="font-size: 8px; opacity: 0.5;"></i>
+            </span>
+        </button>
+                <ul class="dropdown-menu shadow-sm border-0" style="font-size: 11px;">
+                    <li><a class="dropdown-item status-update-link" href="#" data-url="{% url 'tasks:update_status' task.pk %}" data-pk="{{ task.pk }}" data-value="todo">TO DO</a></li>
+                    <li><a class="dropdown-item status-update-link" href="#" data-url="{% url 'tasks:update_status' task.pk %}" data-pk="{{ task.pk }}" data-value="in_progress">IN PROGRESS</a></li>
+                    <li><a class="dropdown-item status-update-link text-success fw-bold" href="#" data-url="{% url 'tasks:update_status' task.pk %}" data-pk="{{ task.pk }}" data-value="completed">COMPLETED</a></li>
+                </ul>
+            </div>
+        </td>
+
+        <td><span class="small fw-medium">{{ task.due_date|date:"M d" }}</span></td>
+
+        <td>
+            <div class="d-flex align-items-center gap-2">
+                <input type="range" class="form-range progress-slider" data-pk="{{ task.pk }}" value="{{ task.progress }}" min="0" max="100" step="5">
+                <span class="small text-muted fw-bold progress-label-{{ task.pk }}" style="font-size: 10px; width: 30px;">{{ task.progress }}%</span>
+            </div>
+        </td>
+
+        <td class="pe-4 text-end">
+            <div class="d-flex justify-content-end gap-2">
+                <a href="{% url 'tasks:task_detail' task.pk %}" class="btn-action btn-detail"><i class="fas fa-expand-alt"></i></a>
+                <a href="{% url 'tasks:task_update' task.pk %}" class="btn-action btn-edit"><i class="fas fa-pen-nib"></i></a>
+            </div>
+        </td>
+    </tr>
+{% endif %}
+
+
+<style>
+    /* 1. This removes the ugly black triangle from Bootstrap buttons */
+    .dropdown-toggle::after {
+        display: none !important;
+    }
+
+    /* 2. Standard Soft UI Badge Styling */
+    .status-badge-soft {
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-weight: 700;
+        font-size: 10px;
+        text-transform: uppercase;
+        display: inline-flex;
+        align-items: center;
+        white-space: nowrap;
+        transition: all 0.2s ease;
+    }
+
+    /* 3. Make the Admin's clickable badge react slightly to hover */
+    .btn-status-toggle:hover .status-badge-soft {
+        filter: brightness(0.9);
+        cursor: pointer;
+    }
+
+    /* 4. Kill the blue background on button focus/active */
+    .btn-status-toggle .btn:focus, 
+    .btn-status-toggle .btn:active,
+    .btn-status-toggle .btn:hover {
+        background: transparent !important;
+        border: none !important;
+    }
+</style>
+
+
+{% comment %} <div class="table-responsive">
     <table class="table table-hover align-middle mb-0">
         <thead class="bg-white border-bottom">
             <tr>
@@ -51,4 +278,4 @@
         {% endif %}
     </ul>
 </nav>
-{% endif %}
+{% endif %} {% endcomment %}

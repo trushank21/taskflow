@@ -67,6 +67,18 @@ class Task(models.Model):
             models.Index(fields=['assigned_to']),
             models.Index(fields=['project']),
         ]
+    
+    def get_status_color(self):
+        """Returns a hex color based on status for the UI badges"""
+        colors = {
+            'todo': '#6c757d',        # Grey
+            'in_progress': '#0d6efd', # Blue
+            'in_review': '#6f42c1',   # Purple
+            'completed': '#198754',   # Green
+            'blocked': '#dc3545',     # Red
+            'testing': '#fd7e14',     # Orange (Example of adding a new one)
+        }
+        return colors.get(self.status, '#6366f1')
 
     def get_status_history(self):
         return self.history.all().select_related('changed_by')

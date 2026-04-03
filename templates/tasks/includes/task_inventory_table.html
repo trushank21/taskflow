@@ -13,6 +13,94 @@
                 <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Task Info</th>
                 <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Project</th>
                 <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Status</th>
+                <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Due Date</th>
+                <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px; width: 140px;">Progress</th>
+                <th class="pe-4 py-3 text-muted small text-uppercase border-0 fw-bold text-end" style="font-size: 11px;">Actions</th>
+            </tr>
+            </thead>
+
+        <tbody>
+            {% for status_label, task_list in grouped_tasks.items %}
+                {# --- DYNAMIC SECTION HEADER --- #}
+                <tr class="bg-light">
+                    <td colspan="12" class="ps-4 py-2" style="background-color: #f8f9fa; border-left: 4px solid #6366f1;">
+                        <span class="badge rounded-pill bg-dark bg-opacity-10 text-dark fw-bold">
+                            <i class="fas fa-layer-group me-2"></i>{{ status_label|upper }}
+                        </span>
+                        <span class="text-muted small ms-2">({{ task_list|length }} tasks)</span>
+                    </td>
+                </tr>
+
+                {# --- TASK ROWS --- #}
+                {% for task in task_list %}
+                    {% include 'tasks/includes/task_list_partial.html' %}
+                {% endfor %}
+                
+            {% empty %}
+                <tr><td colspan="12" class="text-center py-5 text-muted small">No tasks found matching your criteria.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+
+<style>
+    /* 1. Ensure the soft badge looks exactly like the project badges */
+    .status-badge-soft {
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-weight: 700;
+        font-size: 10px;
+        text-transform: uppercase;
+        display: inline-flex;
+        align-items: center;
+        white-space: nowrap;
+        transition: all 0.2s ease;
+    }
+
+    /* 2. Remove the default Bootstrap caret (the ugly black arrow) */
+    .dropdown-toggle::after {
+        display: none !important;
+    }
+
+    /* 3. Hover effect for Admin so they know it's clickable */
+    .btn-status-toggle:hover .status-badge-soft {
+        background-color: rgba(0, 0, 0, 0.05) !important;
+        transform: translateY(-1px);
+    }
+
+    /* 4. Clean up the dropdown menu */
+    .dropdown-menu .dropdown-item {
+        border-radius: 4px;
+        margin: 0 4px;
+        width: calc(100% - 8px);
+    }
+    .dropdown-menu .dropdown-item.active {
+        background-color: #f8f9fa;
+        color: #0d6efd;
+        font-weight: bold;
+    }
+
+
+    
+</style>
+
+{% comment %} [3-04-2026] {% endcomment %}
+{% comment %} <div class="table-responsive" style="overflow: visible;">
+    <table class="table table-hover align-middle mb-0">
+        <thead class="bg-white border-bottom">
+            <tr>
+                <th class="ps-4 py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">No.</th>
+                <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Change Req No.</th>
+                <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Excel CR No.</th>
+                <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Type</th>
+                {% if request.user.profile.role != 'observer' %}
+                <th class="ps-4 py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Assignee</th>
+                {% endif %}
+                <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Days</th>
+                <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Task Info</th>
+                <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Project</th>
+                <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Status</th>
                 
                 <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Due Date</th>
                 <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px; width: 140px;">Progress</th>
@@ -208,7 +296,15 @@
         {% endfor %}
         </tbody>
     </table>
-</div>
+</div> {% endcomment %}
+
+
+
+
+
+
+
+
 
 
 <!-- <div class="table-responsive" style="overflow: visible;">

@@ -359,80 +359,147 @@ def dashboard(request):
 
 
 
-# --- TASK LIST VIEW ---
+# --- TASK LIST VIEW ---[3-04-2026]
+# class TaskListView(LoginRequiredMixin, FilterView):
+#     model = Task
+#     template_name = 'tasks/task_list.html'
+#     context_object_name = 'tasks'
+#     filterset_class = TaskFilter
+#     # paginate_by = 10
+
+#     # def __init__(self, *args, **kwargs):
+#     #     user = kwargs.pop('user', None) # Pass user from the view
+#     #     super().__init__(*args, **kwargs)
+#     #     if user:
+#     #         self.filters['project'].field.queryset = Project.objects.filter(
+#     #             Q(team_members=user) | Q(team_lead=user)
+#     #         ).distinct()
+
+#     def get_queryset(self):
+#         user = self.request.user
+#         qs = Task.objects.select_related('project', 'assigned_to')
+        
+    
+#         # 1. SECURITY SCOPE
+#         if user.profile.role not in ['admin', 'manager','observer']:
+#             qs = qs.filter(
+#                 Q(assigned_to=user) | 
+#                 Q(assigned_by=user) | 
+#                 Q(project__team_members=user)
+#             ).distinct()
+
+#         # 2. WORKSPACE POOL (Mine vs Team)
+#         view_mode = self.request.GET.get('view', 'all')
+#         if view_mode == 'mine':
+#             qs = qs.filter(assigned_to=user)
+#         elif view_mode == 'team':
+#             qs = qs.filter(project__team_members=user).exclude(assigned_to=user)
+
+#         # 3. UPDATED LIFECYCLE TOGGLE
+#         proj_status = self.request.GET.get('proj_status', 'active')
+        
+#         if proj_status == 'completed':
+#             # NEW: Section for only completed tasks
+#             qs = qs.filter(status='completed')
+#         elif proj_status == 'on_hold':
+#             # Show blocked tasks or tasks in stalled projects (excluding completed ones)
+#             qs = qs.filter(
+#                 Q(project__status__in=['on_hold', 'inactive']) | 
+#                 Q(status='blocked')
+#             ).exclude(status='completed')
+#         else:
+#             # Default: Active work in active projects (excluding completed/blocked)
+#             qs = qs.filter(project__status='active').exclude(status__in=['completed', 'blocked'])
+
+#         # 4. FIXED SMART SEARCH
+#         query = self.request.GET.get('q')
+#         if query:
+#             qs = qs.filter(
+#                 Q(title__icontains=query) | 
+#                 Q(project__title__icontains=query)
+#             ).distinct()
+            
+#         # 5. INTEGRATE FILTERS
+#         self.filterset = self.filterset_class(self.request.GET, queryset=qs.order_by('-updated_at'),user=user)
+#         return self.filterset.qs
+    
+#     def get_filterset_kwargs(self, filterset_class):
+#         kwargs = super().get_filterset_kwargs(filterset_class)
+#         kwargs['user'] = self.request.user # Pass user to the filter
+#         return kwargs
+
+#     def render_to_response(self, context, **response_kwargs):
+#         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+#             html = render_to_string('tasks/includes/task_inventory_table.html', context, request=self.request)
+#             return JsonResponse({'html': html})
+#         return super().render_to_response(context, **response_kwargs)
+    
+
 class TaskListView(LoginRequiredMixin, FilterView):
     model = Task
     template_name = 'tasks/task_list.html'
     context_object_name = 'tasks'
     filterset_class = TaskFilter
-    paginate_by = 10
-
-    # def __init__(self, *args, **kwargs):
-    #     user = kwargs.pop('user', None) # Pass user from the view
-    #     super().__init__(*args, **kwargs)
-    #     if user:
-    #         self.filters['project'].field.queryset = Project.objects.filter(
-    #             Q(team_members=user) | Q(team_lead=user)
-    #         ).distinct()
 
     def get_queryset(self):
         user = self.request.user
         qs = Task.objects.select_related('project', 'assigned_to')
         
-    
-        # 1. SECURITY SCOPE
-        if user.profile.role not in ['admin', 'manager','observer']:
+        # Security Scope
+        if user.profile.role not in ['admin', 'manager', 'observer']:
             qs = qs.filter(
                 Q(assigned_to=user) | 
                 Q(assigned_by=user) | 
                 Q(project__team_members=user)
             ).distinct()
 
-        # 2. WORKSPACE POOL (Mine vs Team)
+        # Workspace Pool
         view_mode = self.request.GET.get('view', 'all')
         if view_mode == 'mine':
             qs = qs.filter(assigned_to=user)
         elif view_mode == 'team':
             qs = qs.filter(project__team_members=user).exclude(assigned_to=user)
 
-        # 3. UPDATED LIFECYCLE TOGGLE
-        proj_status = self.request.GET.get('proj_status', 'active')
-        
-        if proj_status == 'completed':
-            # NEW: Section for only completed tasks
-            qs = qs.filter(status='completed')
-        elif proj_status == 'on_hold':
-            # Show blocked tasks or tasks in stalled projects (excluding completed ones)
-            qs = qs.filter(
-                Q(project__status__in=['on_hold', 'inactive']) | 
-                Q(status='blocked')
-            ).exclude(status='completed')
-        else:
-            # Default: Active work in active projects (excluding completed/blocked)
-            qs = qs.filter(project__status='active').exclude(status__in=['completed', 'blocked'])
+        # Smart Search
+        # query = self.request.GET.get('q')
+        # if query:
+        #     qs = qs.filter(
+        #         Q(title__icontains=query) | 
+        #         Q(project__title__icontains=query)
+        #     ).distinct()
 
-        # 4. FIXED SMART SEARCH
-        query = self.request.GET.get('q')
-        if query:
-            qs = qs.filter(
-                Q(title__icontains=query) | 
-                Q(project__title__icontains=query)
-            ).distinct()
-            
-        # 5. INTEGRATE FILTERS
-        self.filterset = self.filterset_class(self.request.GET, queryset=qs.order_by('-updated_at'),user=user)
+        # Apply Filters
+        self.filterset = self.filterset_class(self.request.GET, queryset=qs.order_by('-updated_at'), user=user)
         return self.filterset.qs
     
-    def get_filterset_kwargs(self, filterset_class):
-        kwargs = super().get_filterset_kwargs(filterset_class)
-        kwargs['user'] = self.request.user # Pass user to the filter
-        return kwargs
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        base_qs = self.get_queryset()
 
+        from collections import defaultdict
+        grouped_tasks = defaultdict(list)
+
+        for task in base_qs:
+            # We use the display name (e.g., "In Review") as the key
+            grouped_tasks[task.get_status_display()].append(task)
+
+        context['grouped_tasks'] = dict(grouped_tasks)
+        return context
+    
+        # # Split into sections
+        # context['todo_tasks'] = base_qs.filter(status='todo')
+        # context['completed_tasks'] = base_qs.filter(status='completed')
+        # # All other tasks (In Progress, In Review, Blocked)
+        # context['active_tasks'] = base_qs.exclude(status__in=['todo', 'completed'])
+        # return context
+    
     def render_to_response(self, context, **response_kwargs):
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            # This renders the table with the new section data during AJAX search
             html = render_to_string('tasks/includes/task_inventory_table.html', context, request=self.request)
             return JsonResponse({'html': html})
         return super().render_to_response(context, **response_kwargs)
+    
     
 
 # --- TASK DETAIL VIEW ---
@@ -1067,7 +1134,8 @@ def add_attachment(request, pk):
                     return JsonResponse({
                         'id': attachment.id,
                         'file_name': attachment.file_name,
-                        'url': download_url,
+                        # 'url': download_url,
+                        'url': attachment.file.url,
                         'user': request.user.username,
                         'extension': ext
                     })
@@ -1134,8 +1202,15 @@ def download_attachment(request, pk):
         # missing (for example when running tests with SimpleUploadedFile)
         # we'll skip the signed-url path entirely.
         public_id = getattr(attachment.file, 'public_id', None)
-        resource_type = attachment.file.resource_type
-       
+        ext = os.path.splitext(attachment.file_name)[1].lower()
+        is_raw = ext in ['.xlsx', '.xls', '.csv', '.docx', '.doc', '.zip']
+        
+        # FIX: We must use 'raw' for Excel, otherwise Cloudinary signature fails
+        resource_type = 'raw' if is_raw else 'image'
+        # resource_type = getattr(attachment.file, 'resource_type', 'raw')
+
+        if not public_id:
+            return HttpResponseRedirect(attachment.file.url)
             
         redirect_url, _ = cloudinary_url(
                 public_id,
@@ -1145,6 +1220,7 @@ def download_attachment(request, pk):
                 secure=True,
                 sign_url=True,
             )
+        
         return HttpResponseRedirect(redirect_url)
     except Exception as e:
         # log the error for Render logs and continue with the basic url.

@@ -400,11 +400,14 @@
                     {% for attachment in attachments %}
                     <div id="attachment-row-{{ attachment.pk }}" class="p-2 border rounded-3 mb-2 d-flex align-items-center bg-light-hover transition-all position-relative attachment-row">
                         <div class="file-icon me-3">
-                            {% with extension=attachment.file.url|lower %}
-                                {% if '.jpg' in extension or '.jpeg' in extension or '.png' in extension or '.gif' in extension %}
+                            {% with name=attachment.file_name|lower %}
+                                {% if '.jpg' in name or '.jpeg' in name or '.png' in name or '.gif' in name or '.webp' in name %}
                                     <i class="fas fa-file-image text-success fs-4"></i>
-                                {% elif '.pdf' in extension %}
+                                {% elif '.pdf' in name %}
                                     <i class="fas fa-file-pdf text-danger fs-4"></i>
+                                {% elif '.xlsx' in name or '.xls' in name or '.csv' in name %}
+                                    <i class="fas fa-file-excel text-success fs-4"></i> {% elif '.docx' in name or '.doc' in name %}
+                                    <i class="fas fa-file-word text-primary fs-4"></i>
                                 {% else %}
                                     <i class="fas fa-file-alt text-primary fs-4"></i>
                                 {% endif %}
@@ -418,7 +421,7 @@
                             <button class="btn p-1 text-muted border-0 bg-transparent view-file-btn" data-url="{{ attachment.file.url }}" data-name="{{ attachment.file_name }}">
                                 <i class="fas fa-eye small"></i>
                             </button>
-                            <a href="{% url "tasks:download_attachment" attachment.pk %}"  class="text-muted p-1"><i class="fas fa-download small"></i></a>
+                            <a href="{% url "tasks:download_attachment" attachment.pk %}" target="_blank" download="{{ attachment.file_name }}" class="text-muted p-1"><i class="fas fa-download small"></i></a>
                             {% if not is_locked and request.user.profile.role != 'observer' %}
                                 {% if request.user == attachment.uploaded_by or request.user.profile.role == 'admin' or request.user.profile.role == 'manager' or task.project.team_lead == request.user %}
                             <button type="button" class="btn p-1 text-danger border-0 bg-transparent delete-attachment-btn"  data-id="{{ attachment.pk }}">
@@ -764,7 +767,7 @@ $(document).on('hidden.bs.modal', '.modal', function () {
                             </div>
                             <div class="d-flex gap-2 ms-2" style="position: relative; z-index: 2;">
                                 <button class="btn p-1 text-muted border-0 bg-transparent view-file-btn" data-url="${url}" data-name="${res.file_name}"><i class="fas fa-eye small"></i></button>
-                                <a href="${downloadRoute}"  class="text-muted p-1"><i class="fas fa-download small"></i></a>
+                                <a href="${downloadRoute}" target="_blank" download="${res.file_name}" class="text-muted p-1"><i class="fas fa-download small"></i></a>
                                 <button type="button" class="btn p-1 text-danger border-0 bg-transparent delete-attachment-btn" data-id="${res.id}"><i class="fas fa-trash-alt small"></i></button>
                             </div>
                         </div>`;
@@ -904,20 +907,64 @@ $(document).on('hidden.bs.modal', '.modal', function () {
             });
         });
 
-        // File Previews
+        // File Previews 31-03-2026
+        //$(document).on('click', '.view-file-btn', function() {
+          //  const fileUrl = $(this).data('url'), fileName = $(this).data('name'), extension = fileUrl.split('.').pop().toLowerCase();
+            //$('#previewFilename').text(fileName);
+           // const $iframe = $('#previewFrame'), $imgContainer = $('#previewImageContainer'), $img = $('#previewImage');
+           // if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension)) {
+            //    $iframe.addClass('d-none').attr('src', '');
+            //    $img.attr('src', fileUrl); $imgContainer.removeClass('d-none');
+            //} else {
+             //   $imgContainer.addClass('d-none'); $img.attr('src', '');
+              //  $iframe.removeClass('d-none').attr('src', fileUrl);
+            //}
+            //new bootstrap.Modal(document.getElementById('previewModal')).show();
+        //});
+
+    
         $(document).on('click', '.view-file-btn', function() {
-            const fileUrl = $(this).data('url'), fileName = $(this).data('name'), extension = fileUrl.split('.').pop().toLowerCase();
-            $('#previewFilename').text(fileName);
-            const $iframe = $('#previewFrame'), $imgContainer = $('#previewImageContainer'), $img = $('#previewImage');
-            if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension)) {
-                $iframe.addClass('d-none').attr('src', '');
-                $img.attr('src', fileUrl); $imgContainer.removeClass('d-none');
-            } else {
-                $imgContainer.addClass('d-none'); $img.attr('src', '');
-                $iframe.removeClass('d-none').attr('src', fileUrl);
-            }
-            new bootstrap.Modal(document.getElementById('previewModal')).show();
-        });
+    const fileUrl = $(this).data('url');
+    const fileName = $(this).data('name');
+    const extension = fileName.split('.').pop().toLowerCase();
+    
+    // Reset Modal State
+    $('#previewFrame').addClass('d-none').attr('src', '');
+    $('#previewImageContainer').addClass('d-none');
+    $('#previewImage').attr('src', '');
+    $('#no-preview').remove();
+
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension)) {
+        $('#previewImage').attr('src', fileUrl); 
+        $('#previewImageContainer').removeClass('d-none');
+    } 
+    else if (['xlsx', 'xls', 'csv'].includes(extension)) {
+        $('.modal-body').append(`
+            <div id="no-preview" class="text-center p-5 text-white">
+                <i class="fas fa-file-excel fa-4x mb-3 text-success"></i>
+                <h5>Preview not available</h5>
+                <a href="${fileUrl}" class="btn btn-success btn-sm mt-2">Download File</a>
+            </div>
+        `);
+    } else {
+        $('#previewFrame').removeClass('d-none').attr('src', fileUrl);
+    }
+    
+    new bootstrap.Modal(document.getElementById('previewModal')).show();
+});
+
+
+
+// Clean up the modal when it closes so the "No Preview" doesn't stay there
+$('#previewModal').on('hidden.bs.modal', function () {
+    $('#previewFrame').attr('src', '');
+    $('#previewImage').attr('src', '');
+    $('#no-preview').remove();
+});
+
+
+
+
 
         // --- PROGRESS & STATUS AJAX (INTELLIGENT SYNC) ---
         $('#btn-save-progress-ajax').on('click', function() {
