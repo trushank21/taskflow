@@ -1,89 +1,98 @@
 <div class="table-responsive" style="overflow: visible;">
-    <table class="table table-hover align-middle mb-0">
-        <thead class="bg-white border-bottom">
-            <tr>
-                <th class="ps-4 py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">No.</th>
-                <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Change Req No.</th>
-                <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Excel CR No.</th>
-                <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Type</th>
-                {% if request.user.profile.role != 'observer' %}
-                <th class="ps-4 py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Assignee</th>
-                {% endif %}
-                <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Days</th>
-                <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Task Info</th>
-                <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Project</th>
-                <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Status</th>
-                <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px;">Due Date</th>
-                <th class="py-3 text-muted small text-uppercase border-0 fw-bold" style="font-size: 11px; width: 140px;">Progress</th>
-                <th class="pe-4 py-3 text-muted small text-uppercase border-0 fw-bold text-end" style="font-size: 11px;">Actions</th>
-            </tr>
-            </thead>
+    <table class="table table-hover align-middle mb-0" style="border-collapse: separate; border-spacing: 0;">
+        {% for status_label, task_list in grouped_tasks.items %}
+            
+            {# --- SECTION SPACER --- #}
+            {% if not forloop.first %}
+                <tbody>
+                    <tr>
+                        <td colspan="12" style="height: 40px; border: none; background: transparent;"></td>
+                    </tr>
+                </tbody>
+            {% endif %}
 
-        <tbody>
-            {% for status_label, task_list in grouped_tasks.items %}
-                {# --- DYNAMIC SECTION HEADER --- #}
-                {% comment %} <tr class="bg-light">
-                    <td colspan="12" class="ps-4 py-2" style="background-color: #f8f9fa; border-left: 4px solid #6366f1;">
-                        <span class="badge rounded-pill bg-dark bg-opacity-10 text-dark fw-bold">
-                            <i class="fas fa-layer-group me-2"></i>{{ status_label|upper }}
-                        </span>
-                        <span class="text-muted small ms-2">({{ task_list|length }} tasks)</span>
+            {# --- STATUS SECTION BLOCK --- #}
+            <tbody class="border-0 shadow-sm">
+                {# --- STATUS LABEL CARD HEADER --- #}
+                <tr class="bg-light">
+                    <td colspan="12" class="ps-4 py-3" style="background-color: #f8f9fa; border-left: 5px solid 
+                        {% if status_label|lower == 'completed' %}#10b981
+                        {% elif status_label|lower == 'todo' %}#6b7280
+                        {% elif status_label|lower == 'in_progress' %}#6366f1
+                        {% elif status_label|lower == 'blocked' %}#ef4444
+                        {% elif status_label|lower == 'in_review' %}#f59e0b
+                        {% else %}#6366f1{% endif %}; border-top: 1px solid #dee2e6; border-radius: 8px 8px 0 0;">
+                        
+                        <div class="d-flex align-items-center">
+                            <span class="badge rounded-pill fw-bold shadow-sm" style="font-size: 16px; padding: 10px 20px;
+                                {% if status_label|lower == 'completed' %} background-color: #d1fae5; color: #065f46;
+                                {% elif status_label|lower == 'todo' %} background-color: #f3f4f6; color: #374151;
+                                {% elif status_label|lower == 'in_progress' %} background-color: #e0e7ff; color: #3730a3;
+                                {% elif status_label|lower == 'blocked' %} background-color: #fee2e2; color: #991b1b;
+                                {% elif status_label|lower == 'in_review' %} background-color: #fef3c7; color: #92400e;
+                                {% else %} background-color: #e0e7ff; color: #3730a3; {% endif %}">
+                                
+                                <i class="fas {% if status_label|lower == 'completed' %}fa-check-circle
+                                    {% elif status_label|lower == 'todo' %}fa-list-ul
+                                    {% elif status_label|lower == 'in_progress' %}fa-spinner fa-spin
+                                    {% elif status_label|lower == 'blocked' %}fa-ban
+                                    {% else %}fa-layer-group{% endif %} me-2"></i>
+                                {{ status_label|upper }}
+                            </span>
+                            <span class="text-muted fw-medium ms-3" style="font-size: 13px;">
+                                {{ task_list|length }} Task{{ task_list|length|pluralize }} in this stage
+                            </span>
+                        </div>
                     </td>
-                </tr>  {% endcomment %}
+                </tr>
 
-                {% if not forloop.first %}
-        <tr><td colspan="12" style="height: 30px; border: none; background: transparent;"></td></tr>
-    {% endif %}
-
-    {# --- DYNAMIC SECTION HEADER --- #}
-    <tr class="bg-light">
-        <td colspan="12" class="ps-4 py-3 shadow-sm" style="background-color: #f8f9fa; border-left: 5px solid 
-            {% if status_label|lower == 'completed' %}#10b981
-            {% elif status_label|lower == 'todo' %}#6b7280
-            {% elif status_label|lower == 'in_progress' %}#6366f1
-            {% elif status_label|lower == 'blocked' %}#ef4444
-            {% elif status_label|lower == 'in_review' %}#f59e0b
-            {% else %}#6366f1{% endif %}; border-top: 1px solid #dee2e6; border-radius: 4px 4px 0 0;">
-            
-            <span class="badge rounded-pill fw-bold shadow-sm" style="font-size: 18px; padding: 8px 16px;
-                {% if status_label|lower == 'completed' %} background-color: #d1fae5; color: #065f46;
-                {% elif status_label|lower == 'todo' %} background-color: #f3f4f6; color: #374151;
-                {% elif status_label|lower == 'in_progress' %} background-color: #e0e7ff; color: #3730a3;
-                {% elif status_label|lower == 'blocked' %} background-color: #fee2e2; color: #991b1b;
-                {% elif status_label|lower == 'in_review' %} background-color: #fef3c7; color: #92400e;
-                {% else %} background-color: #e0e7ff; color: #3730a3; {% endif %}">
-                
-                <i class="fas {% if status_label|lower == 'completed' %}fa-check-circle
-                    {% elif status_label|lower == 'todo' %}fa-list-ul
-                    {% elif status_label|lower == 'in_progress' %}fa-spinner fa-spin
-                    {% elif status_label|lower == 'blocked' %}fa-ban
-                    {% else %}fa-layer-group{% endif %} me-2"></i>
-                {{ status_label|upper }}
-            </span>
-            
-            <span class="text-muted fw-medium ms-3" style="font-size: 12px;">
-                {{ task_list|length }} Task{{ task_list|length|pluralize }} in this stage
-            </span>
-        </td>
-    </tr>
-
-    
+                {# --- REPEATING TABLE HEAD LABELS --- #}
+                <tr class="bg-white border-bottom shadow-sm">
+                    <th class="ps-4 py-3 text-muted small text-uppercase fw-bold" style="font-size: 10px; background: #fafafa; border-bottom: 2px solid #f1f5f9;">No.</th>
+                    <th class="py-3 text-muted small text-uppercase fw-bold" style="font-size: 10px; background: #fafafa; border-bottom: 2px solid #f1f5f9;">Change Req No.</th>
+                    <th class="py-3 text-muted small text-uppercase fw-bold" style="font-size: 10px; background: #fafafa; border-bottom: 2px solid #f1f5f9;">Excel CR No.</th>
+                    <th class="py-3 text-muted small text-uppercase fw-bold" style="font-size: 10px; background: #fafafa; border-bottom: 2px solid #f1f5f9;">Type</th>
+                    {% if request.user.profile.role != 'observer' %}
+                    <th class="ps-4 py-3 text-muted small text-uppercase fw-bold" style="font-size: 10px; background: #fafafa; border-bottom: 2px solid #f1f5f9;">Assignee</th>
+                    {% endif %}
+                    <th class="py-3 text-muted small text-uppercase fw-bold" style="font-size: 10px; background: #fafafa; border-bottom: 2px solid #f1f5f9;">Days</th>
+                    <th class="py-3 text-muted small text-uppercase fw-bold" style="font-size: 10px; background: #fafafa; border-bottom: 2px solid #f1f5f9;">Task Info</th>
+                    <th class="py-3 text-muted small text-uppercase fw-bold" style="font-size: 10px; background: #fafafa; border-bottom: 2px solid #f1f5f9;">Project</th>
+                    <th class="py-3 text-muted small text-uppercase fw-bold" style="font-size: 10px; background: #fafafa; border-bottom: 2px solid #f1f5f9;">Status</th>
+                    <th class="py-3 text-muted small text-uppercase fw-bold" style="font-size: 10px; background: #fafafa; border-bottom: 2px solid #f1f5f9;">Due Date</th>
+                    <th class="py-3 text-muted small text-uppercase fw-bold" style="font-size: 10px; width: 140px; background: #fafafa; border-bottom: 2px solid #f1f5f9;">Progress</th>
+                    <th class="pe-4 py-3 text-muted small text-uppercase fw-bold text-end" style="font-size: 10px; background: #fafafa; border-bottom: 2px solid #f1f5f9;">Actions</th>
+                </tr>
 
                 {# --- TASK ROWS --- #}
                 {% for task in task_list %}
                     {% include 'tasks/includes/task_list_partial.html' %}
                 {% endfor %}
-                
-            {% empty %}
-                <tr><td colspan="12" class="text-center py-5 text-muted small">No tasks found matching your criteria.</td></tr>  
-            {% endfor %}
-        </tbody>
+
+                {% if not task_list %}
+                    <tr>
+                        <td colspan="12" class="text-center py-4 text-muted small bg-white">No tasks found in this stage.</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+            
+        {% empty %}
+            <tbody>
+                <tr>
+                    <td colspan="12" class="text-center py-5 text-muted small bg-white">No tasks found matching your criteria.</td>
+                </tr>
+            </tbody>
+        {% endfor %}
     </table>
 </div>
 
-
 <style>
-    /* 1. Ensure the soft badge looks exactly like the project badges */
+    /* Ensure the table responsive container allows dropdowns to overflow */
+    .table-responsive {
+        overflow: visible !important;
+    }
+
+    /* Status Badge Styles */
     .status-badge-soft {
         padding: 4px 10px;
         border-radius: 6px;
@@ -96,46 +105,54 @@
         transition: all 0.2s ease;
     }
 
-    /* 2. Remove the default Bootstrap caret (the ugly black arrow) */
+    /* Dropdown UI Cleanups */
     .dropdown-toggle::after {
         display: none !important;
     }
 
-    /* 3. Hover effect for Admin so they know it's clickable */
     .btn-status-toggle:hover .status-badge-soft {
         background-color: rgba(0, 0, 0, 0.05) !important;
         transform: translateY(-1px);
     }
 
-    /* 4. Clean up the dropdown menu */
     .dropdown-menu .dropdown-item {
         border-radius: 4px;
         margin: 0 4px;
         width: calc(100% - 8px);
     }
+
     .dropdown-menu .dropdown-item.active {
         background-color: #f8f9fa;
         color: #0d6efd;
         font-weight: bold;
     }
 
-    /* Add a gap above every section header except the first one */
-tr.bg-light {
-    border-top: 20px solid white !important;
-}
+    /* Table & Header Formatting */
+    th {
+        white-space: nowrap;
+        letter-spacing: 0.5px;
+    }
 
-/* Ensure the table doesn't collapse the borders */
-.table {
-    border-collapse: separate !important;
-    border-spacing: 0;
-}
+    /* Card Shadow Effect for each Tbody */
+    tbody {
+        background-color: white;
+    }
 
-/* Optional: Add a slight shadow to the header row to make it pop like a card */
-tr.bg-light td {
-    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-}
+    /* Add a gap above every section header */
+    tr.bg-light {
+        border-top: none !important;
+    }
 
-    
+    .table > :not(caption) > * > * {
+        border-bottom-width: 1px;
+        border-color: #f1f5f9;
+        padding: 12px 8px;
+    }
+
+    /* Remove border from status label row so it blends with headers below */
+    tr.bg-light td {
+        border-bottom: none !important;
+    }
 </style>
 
 {% comment %} [3-04-2026] {% endcomment %}
