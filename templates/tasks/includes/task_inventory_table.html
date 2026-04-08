@@ -15,36 +15,38 @@
             <tbody class="border-0 shadow-sm">
                 {# --- STATUS LABEL CARD HEADER --- #}
                 <tr class="bg-light">
-                    <td colspan="12" class="ps-4 py-3" style="background-color: #f8f9fa; border-left: 5px solid 
-                        {% if status_label|lower == 'completed' %}#10b981
-                        {% elif status_label|lower == 'todo' %}#6b7280
-                        {% elif status_label|lower == 'in_progress' %}#6366f1
-                        {% elif status_label|lower == 'blocked' %}#ef4444
-                        {% elif status_label|lower == 'in_review' %}#f59e0b
-                        {% else %}#6366f1{% endif %}; border-top: 1px solid #dee2e6; border-radius: 8px 8px 0 0;">
+            <td colspan="12" class="ps-4 py-3" style="background-color: #f8f9fa; border-left: 5px solid 
+                {% if status_label|lower == 'completed' or status_label|lower == 'done' %}#10b981
+                {% elif status_label|lower == 'todo' or status_label|lower == 'to do' %}#6b7280
+                {% elif status_label|lower == 'in_progress' or status_label|lower == 'in progress' %}#6366f1
+                {% elif status_label|lower == 'blocked' %}#ef4444
+                {% elif status_label|lower == 'in_review' or status_label|lower == 'in review' %}#f59e0b
+                {% else %}#0d6efd{% endif %}; border-top: 1px solid #dee2e6; border-radius: 8px 8px 0 0;">
+                
+                <div class="d-flex align-items-center">
+                    <span class="badge rounded-pill fw-bold shadow-sm" style="font-size: 16px; padding: 10px 20px;
+                        {% if status_label|lower == 'completed' or status_label|lower == 'done' %} background-color: #d1fae5; color: #065f46;
+                        {% elif status_label|lower == 'todo' or status_label|lower == 'to do' %} background-color: #f3f4f6; color: #374151;
+                        {% elif status_label|lower == 'in_progress' or status_label|lower == 'in progress' %} background-color: #e0e7ff; color: #3730a3;
+                        {% elif status_label|lower == 'blocked' %} background-color: #fee2e2; color: #991b1b;
+                        {% elif status_label|lower == 'in_review' or status_label|lower == 'in review' %} background-color: #fef3c7; color: #92400e;
+                        {% else %} background-color: #e0e7ff; color: #0d6efd; {% endif %}">
                         
-                        <div class="d-flex align-items-center">
-                            <span class="badge rounded-pill fw-bold shadow-sm" style="font-size: 16px; padding: 10px 20px;
-                                {% if status_label|lower == 'completed' %} background-color: #d1fae5; color: #065f46;
-                                {% elif status_label|lower == 'todo' %} background-color: #f3f4f6; color: #374151;
-                                {% elif status_label|lower == 'in_progress' %} background-color: #e0e7ff; color: #3730a3;
-                                {% elif status_label|lower == 'blocked' %} background-color: #fee2e2; color: #991b1b;
-                                {% elif status_label|lower == 'in_review' %} background-color: #fef3c7; color: #92400e;
-                                {% else %} background-color: #e0e7ff; color: #3730a3; {% endif %}">
-                                
-                                <i class="fas {% if status_label|lower == 'completed' %}fa-check-circle
-                                    {% elif status_label|lower == 'todo' %}fa-list-ul
-                                    {% elif status_label|lower == 'in_progress' %}fa-spinner fa-spin
-                                    {% elif status_label|lower == 'blocked' %}fa-ban
-                                    {% else %}fa-layer-group{% endif %} me-2"></i>
-                                {{ status_label|upper }}
-                            </span>
-                            <span class="text-muted fw-medium ms-3" style="font-size: 13px;">
-                                {{ task_list|length }} Task{{ task_list|length|pluralize }} in this stage
-                            </span>
-                        </div>
-                    </td>
-                </tr>
+                        <i class="fas 
+                            {% if status_label|lower == 'completed' or status_label|lower == 'done' %}fa-check-circle
+                            {% elif status_label|lower == 'todo' or status_label|lower == 'to do' %}fa-clipboard-list
+                            {% elif status_label|lower == 'in_progress' or status_label|lower == 'in progress' %}fa-spinner fa-spin
+                            {% elif status_label|lower == 'blocked' %}fa-ban
+                            {% elif status_label|lower == 'in_review' or status_label|lower == 'in review' %}fa-eye
+                            {% else %}fa-tasks{% endif %} me-2"></i>
+                        {{ status_label|upper }}
+                    </span>
+                    <span class="text-muted fw-medium ms-3" style="font-size: 13px;">
+                        {{ task_list|length }} Task{{ task_list|length|pluralize }} in this stage
+                    </span>
+                </div>
+            </td>
+        </tr>
 
                 {# --- REPEATING TABLE HEAD LABELS --- #}
                 <tr class="bg-white border-bottom shadow-sm">
