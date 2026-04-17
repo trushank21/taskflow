@@ -142,6 +142,7 @@ def dashboard(request):
     # We use 'distinct=True' for project counts because tasks_qs might have duplicates from JOINS
     # --- UPDATED AGGREGATION ---
     stats = tasks_qs.aggregate(
+        total_tasks_all=Count('id'),
         active_tasks=Count('id', filter=Q(project__status='active') & ~Q(status='completed')),
         
         # FIX: Remove 'project__status=active' to count ALL completed tasks in the pool
@@ -195,6 +196,7 @@ def dashboard(request):
     
     # --- RESPONSE HANDLING ---
     context = {
+        'total_tasks_count': stats['total_tasks_all'] or 0,
         'overall_completion': round(stats['overall_progress'] or 0),
         'today': timezone.now().date(),
         'view_mode': view_mode,
@@ -221,6 +223,7 @@ def dashboard(request):
         # Update context values into the AJAX response
         return JsonResponse({
             'html': html,
+            'total_tasks_count': context['total_tasks_count'],
             'total_active': context['total_active'],
             'completed': context['completed_tasks'],
             'on_hold': context['on_hold_count'],
@@ -496,8 +499,10 @@ class TaskListView(LoginRequiredMixin, FilterView):
     def render_to_response(self, context, **response_kwargs):
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
             # This renders the table with the new section data during AJAX search
+            total_count = self.filterset.qs.count()
+            
             html = render_to_string('tasks/includes/task_inventory_table.html', context, request=self.request)
-            return JsonResponse({'html': html})
+            return JsonResponse({'html': html,'total_count': total_count})
         return super().render_to_response(context, **response_kwargs)
     
     

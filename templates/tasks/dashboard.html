@@ -11,6 +11,8 @@
         <p class="text-muted small mb-0">Live project activity and task tracking.</p>
     </div>
 
+
+
     <div class="btn-group bg-white p-1 rounded-3 shadow-sm border" style="height: 40px;">
         <button data-view="personal" class="btn-view-toggle btn btn-sm d-flex align-items-center px-4 fw-bold {% if view_mode != 'team' %}btn-primary shadow-sm{% else %}btn-light text-muted border-0{% endif %}" style="font-size: 12px;">
             <i class="fas fa-user me-2"></i> Personal
@@ -21,7 +23,20 @@
     </div>
 </div>
 
+
+
 <div class="row g-3 mb-4">
+
+    <div class="col-12 col-md-4 col-xl">
+        <div class="card-custom h-100 border-start border-4 shadow-sm" style="border-color: #6c757d !important;">
+            <p class="text-muted small text-uppercase fw-bold mb-1">Total Tasks</p>
+            <div class="d-flex align-items-baseline gap-2">
+                <h2 class="fw-bold mb-0 count-total text-dark">{{ total_tasks_count }}</h2>
+                <span class="text-muted extra-small">assigned</span>
+            </div>
+        </div>
+    </div>
+
     <div class="col-12 col-md-4 col-xl">
         <div class="card-custom h-100 border-start border-4 shadow-sm" style="border-color: #6366f1 !important;">
             <p class="text-muted small text-uppercase fw-bold mb-1">Active Tasks</p>

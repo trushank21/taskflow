@@ -8,7 +8,16 @@
 <div class="animate__animated animate__fadeIn">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
         <div>
-            <h4 class="fw-bold text-dark mb-0">Full Task Inventory</h4>
+            <h4 class="fw-bold text-dark mb-0">Full Task Inventory
+                <span class="badge bg-primary-subtle text-primary rounded-pill ms-2" style="font-size: 12px;">
+            {% if is_paginated %}
+                Total tasks:{{ page_obj.paginator.count }}
+            {% else %}
+                {% comment %} Total tasks:{{ tasks|length }} {% endcomment %}
+                Total tasks:{{ filter.qs.count }}
+            {% endif %}
+        </span>
+            </h4>
             <p class="text-muted small mb-0">Manage and track progress across your workspace.</p>
         </div>
 
@@ -117,6 +126,7 @@ $(document).ready(function() {
             headers: {'X-Requested-With': 'XMLHttpRequest'},
             success: function(response) {
                 $container.html(response.html).css('opacity', '1');
+                $('#total-task-count').text(response.total_count);
                 var dropdownElementList = [].slice.call(document.querySelectorAll('[data-bs-toggle="dropdown"]'));
                 dropdownElementList.map(function (el) { return new bootstrap.Dropdown(el); });
             }
